@@ -1,0 +1,24 @@
+# =========================
+# DADOS PESADOS
+# =========================
+*.nc
+*.xlsx
+
+# =========================
+# PASTAS QUE NÃO PRECISAM
+# =========================
+diretorios/testing/
+diretorios/climate_risk_index/data/raw_data/terraclimate/
+diretorios/climate_risk_index/data/processed_data/
+
+# =========================
+# PYTHON
+# =========================
+__pycache__/
+*.pyc
+
+# =========================
+# SISTEMA
+# =========================
+.DS_Store
+Thumbs.db
