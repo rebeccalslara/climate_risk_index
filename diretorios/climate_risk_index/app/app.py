@@ -23,11 +23,19 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 st.markdown("""
-<div style="width:100vw; height:100px; overflow:hidden; margin-left:-1.5rem;">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/b/b2/20181204_Warming_stripes_%28global%2C_WMO%2C_1850-2018%29_-_Climate_Lab_Book_%28Ed_Hawkins%29.svg"
-         style="width:100%; height:100%; object-fit:cover;">
-</div>
+<style>
+[data-testid="stImage"] img {
+    height: 120px;
+    object-fit: cover;
+}
+</style>
 """, unsafe_allow_html=True)
+
+st.image(
+    "https://upload.wikimedia.org/wikipedia/commons/b/b2/20181204_Warming_stripes_%28global%2C_WMO%2C_1850-2018%29_-_Climate_Lab_Book_%28Ed_Hawkins%29.svg",
+    use_container_width=True
+)
+
 # =========================
 # DARK MODE
 # =========================
