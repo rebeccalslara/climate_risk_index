@@ -120,7 +120,7 @@ df["rank_risk"] = df["risk_norm"].rank(ascending=False, method="min")
 
 col_order = [
     "municipio",
-    "energia_norm", "hhi_norm", "pib_pc_inv", "vulnerability_index",
+    "energia_norm", "pib_pc_inv", "agro_pc_norm", "vulnerability_index",
     "def_mean", "ppt_std", "ws_std", "dtr_mean", "hazard_index",
     "empregos_pc", "empresas_pc", "exposure_index_pc",
     "climate_risk_index", "risk_norm", "rank_risk"
@@ -132,7 +132,7 @@ df = df[col_order]
 # OUTPUT 1 → BASE COMPLETA
 # =========================
 
-df.to_csv(outputs_dir / "climate_risk_index_sc_2025.csv", index=False)
+df.to_csv(outputs_dir / "climate_risk_index_sc_2025_new.csv", index=False)
 
 # =========================
 # OUTPUT 2 → RANKING LIMPO
@@ -142,7 +142,7 @@ ranking = df.sort_values("risk_norm", ascending=False)[
     ["municipio", "risk_norm"]
 ]
 
-ranking.to_csv(outputs_dir / "climate_risk_ranking_sc_2025.csv", index=False)
+ranking.to_csv(outputs_dir / "climate_risk_ranking_sc_2025_new.csv", index=False)
 
 print("\n🔝 TOP 10 MAIS EM RISCO:")
 print(ranking.head(10))
@@ -170,9 +170,6 @@ gdf_map = gpd.read_file(shapefile_path)
 
 print("\nColunas do shapefile:")
 print(gdf_map.columns)
-
-gdf_map[gdf_map["NM_MUN"] == "Florianópolis"].plot()
-plt.show()
 
 # AJUSTAR SE NECESSÁRIO
 col_mun = "NM_MUN"

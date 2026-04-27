@@ -185,8 +185,8 @@ def styled_table(df_input):
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-data_path = BASE_DIR / "outputs" / "climate_risk_index_sc_2025.csv"
-ranking_path = BASE_DIR / "outputs" / "climate_risk_ranking_sc_2025.csv"
+data_path = BASE_DIR / "outputs" / "climate_risk_index_sc_2025_new.csv"
+ranking_path = BASE_DIR / "outputs" / "climate_risk_ranking_sc_2025_new.csv"
 shapefile_path = BASE_DIR / "data" / "raw_data" / "shapes" / "SC_Municipios_2025.shp"
 
 # =========================
@@ -288,9 +288,12 @@ Este projeto apresenta uma **adaptação do índice de risco climático do IPCC 
 """, unsafe_allow_html=True)
 
     st.markdown("""
-Essa formulação, adotada por organismos internacionais como o IPCC e o UNDRR, entende o risco como um fenômeno sistêmico, resultante da combinação entre condições climáticas adversas, a exposição de ativos econômicos e a vulnerabilidade estrutural dos sistemas analisados.
+Essa formulação, adotada por organismos internacionais como o IPCC e o UNDRR, entende o risco como um fenômeno sistêmico, resultante da combinação entre condições climáticas adversas, a exposição de ativos econômicos e a vulnerabilidade estrutural dos sistemas analisados. A formulação multiplicativa implica que a ausência ou baixa intensidade de qualquer componente reduz significativamente o risco total, evitando compensações indevidas entre fatores.
 
 Neste trabalho, o modelo foi adaptado para capturar especificamente o **risco climático sobre a estrutura produtiva industrial municipal**, incorporando variáveis que refletem a dinâmica regional.
+
+> O índice resultante representa o **nível relativo de risco climático associado à atividade industrial municipal**. Valores variam entre 0 e 1, sendo que os mais elevados indicam maior suscetibilidade a impactos econômicos decorrentes de choques climáticos.
+
 """)
     
     titulo_h2("Construção dos índices")
@@ -313,46 +316,45 @@ A utilização de métricas per capita e sua agregação por média simples perm
     titulo_h3("Vulnerability (Vulnerabilidade)")
     st.markdown("""
 
-A vulnerabilidade reflete a sensibilidade e a capacidade estrutural de resiliência e adaptação dos municípios, sendo composta por três dimensões principais: intensidade energética industrial per capita (`energia_norm`), concentração setorial medida pelo índice Herfindahl-Hirschman (`hhi_norm`) e renda per capita (`pib_pc_inv`).
+A vulnerabilidade reflete a sensibilidade climática e energética e a capacidade adaptativa da renda, sendo composta por três dimensões principais: intensidade energética industrial per capita (`energia_norm`), valor da produção agrícola per capita (`agro_pc_norm`) e renda per capita (`pib_pc_inv`).
 
-Esse conjunto de variáveis captura a sensibilidade dos municípios a choques energéticos e setoriais, bem como sua capacidade adaptativa, aproximada pela renda disponível para resposta e reconstrução. A agregação foi realizada por meio de média simples, assumindo contribuição equilibrada entre os fatores estruturais.
+Esse conjunto de variáveis captura a sensibilidade dos municípios a choques energéticos e climaticos do setor agrícola, bem como sua capacidade adaptativa, aproximada pela renda disponível para resposta e reconstrução. A agregação foi realizada por meio de média simples, assumindo contribuição equilibrada entre os fatores estruturais.
+
 """)
-    st.markdown("""
+    
+    
+    col1, col2 = st.columns([1, 1])
+    with col1: 
+        st.markdown("""
+        <div style="
+            font-size:13px; 
+            line-height:1.6;
+        "> 
+        ---
+                    
+        #### Nota sobre os dados
 
----
-                            
-#### Cálculo do risco climático
+        Os dados utilizados são provenientes de bases oficiais e amplamente reconhecidas, incluindo TerraClimate (variáveis climáticas), SIDRA/IBGE (indicadores econômicos), RAIS (estrutura produtiva) e CELESC (dados energéticos).
 
-O índice final foi construído de forma multiplicativa:
+        Todas as variáveis foram previamente tratadas, normalizadas e harmonizadas ao nível municipal, assegurando consistência e comparabilidade entre as unidades de análise.
 
-**Risk = Hazard × Exposure × Vulnerability**
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        st.markdown("""
+         <div style="
+            color:#GREY; 
+            font-size:13px; 
+            line-height:1.6;
+        "> 
+        ---
+                        
+        #### Considerações finais
 
-Essa escolha segue a literatura do IPCC e da economia do risco, ao considerar que o risco emerge da interação simultânea entre as três dimensões. A formulação multiplicativa implica que a ausência ou baixa intensidade de qualquer componente reduz significativamente o risco total, evitando compensações indevidas entre fatores.
+        O índice proposto constitui uma ferramenta analítica para a identificação de **hotspots de risco climático industrial em Santa Catarina**, podendo subsidiar a formulação de políticas públicas, estratégias de adaptação e análises econômicas regionais sob a perspectiva das mudanças climáticas.
 
-Em termos analíticos, isso significa que níveis elevados de risco ocorrem apenas quando há simultaneamente perigo climático relevante, alta exposição industrial e elevada vulnerabilidade estrutural.
-
----
-
-#### Interpretação do índice
-
-O índice resultante representa o **nível relativo de risco climático associado à atividade industrial municipal**. Valores variam entre 0 e 1, sendo que os mais elevados indicam maior suscetibilidade a impactos econômicos decorrentes de choques climáticos, seja pela intensidade dos eventos, pela exposição da estrutura produtiva ou por limitações na capacidade de adaptação.
-
----
-
-#### Nota sobre os dados
-
-Os dados utilizados são provenientes de bases oficiais e amplamente reconhecidas, incluindo TerraClimate (variáveis climáticas), SIDRA/IBGE (indicadores econômicos), RAIS (estrutura produtiva) e CELESC (dados energéticos).
-
-Todas as variáveis foram previamente tratadas, normalizadas e harmonizadas ao nível municipal, assegurando consistência e comparabilidade entre as unidades de análise.
-
----
-
-#### Considerações finais
-
-O índice proposto constitui uma ferramenta analítica para a identificação de **hotspots de risco climático industrial em Santa Catarina**, podendo subsidiar a formulação de políticas públicas, estratégias de adaptação e análises econômicas regionais sob a perspectiva das mudanças climáticas.
-
-Trata-se de uma medida relativa, adaptada ao contexto regional, que mantém aderência ao arcabouço conceitual do IPCC, ao mesmo tempo em que incorpora especificidades da estrutura industrial.
-""", unsafe_allow_html=True)
+        Trata-se de uma medida relativa, adaptada ao contexto regional, que mantém aderência ao arcabouço conceitual do IPCC.
+        """, unsafe_allow_html=True)
     
 # =========================
 # OVERVIEW
@@ -374,6 +376,12 @@ with tab1:
             x="risk_norm",
             nbins=30,
             opacity=0.85
+        )
+
+        fig_dist.update_traces(
+            hovertemplate=
+            "Índice de Risco Climático (faixa): %{x}<br>" +
+            "Municípios: %{y}<extra></extra>"
         )
 
         fig_dist.update_layout(
@@ -413,7 +421,7 @@ with tab1:
         mean = df["risk_norm"].mean()
         std = df["risk_norm"].std()
         skew = df["risk_norm"].skew()
-
+    
         # interpretação da assimetria
         if skew > 0.5:
             skew_text = "assimetria positiva, indicando concentração de municípios em níveis mais baixos de risco, com poucos municípios apresentando valores elevados"
@@ -453,7 +461,6 @@ with tab1:
         "> 
                              
         A distribuição do risco climático industrial em Santa Catarina apresenta <b>{skew_text}</b>, 
-        indicando concentração do risco em contextos municipais específicos, e não uma distribuição uniforme.
 
         Observa-se também <b>{disp_text}</b>. Dada a natureza multiplicativa do índice, esse resultado deve ser interpretado com cautela: 
         baixa dispersão pode refletir não apenas homogeneidade, mas também a presença de dimensões sistematicamente reduzidas,
@@ -499,7 +506,12 @@ with tab1:
             opacity=0.85
         )
 
-        fig_mismatch.update_traces(marker=dict(color="#60a5fa"))
+        fig_mismatch.update_traces(
+            hovertemplate=
+            "Desbalanceamento (faixa): %{x}<br>" +
+            "Municípios: %{y}<extra></extra>",
+            marker=dict(color="#60a5fa")
+        )
 
         fig_mismatch.update_layout(
             height=300,
@@ -766,7 +778,7 @@ def gerar_texto_insight(df, df_mun):
     else:
         vars_dict = {
             "intensidade energética": df_mun["energia_norm"].values[0],
-            "concentração setorial": df_mun["hhi_norm"].values[0],
+            "sensibilidade da produção agrícola": df_mun["agro_pc_norm"].values[0],
             "resiliência da renda": df_mun["pib_pc_inv"].values[0]
         }
 
@@ -792,7 +804,7 @@ def gerar_texto_insight(df, df_mun):
         else:
             second_vars = {
                 "intensidade energética": df_mun["energia_norm"].values[0],
-                "concentração setorial": df_mun["hhi_norm"].values[0],
+                "sensibilidade da produção agrícola": df_mun["agro_pc_norm"].values[0],
                 "resiliência da renda": df_mun["pib_pc_inv"].values[0]
             }
 
@@ -1001,12 +1013,12 @@ with tab4:
                 vuln_df = pd.DataFrame({
                     "Variáveis": [
                         "Intensidade Energética",
-                        "Concentração Setorial",
+                        "Sensibilidade da Produção Agrícola",
                         "Resiliência da Renda"
                     ],
                     "Valor": [
                         df_mun["energia_norm"].values[0],
-                        df_mun["hhi_norm"].values[0],
+                        df_mun["agro_pc_norm"].values[0],
                         df_mun["pib_pc_inv"].values[0]
                     ]
                 })
@@ -1045,150 +1057,7 @@ with tab4:
 
             with col_text:
 
-                # =========================
-                # INSIGHT AUTOMATIZADO
-                # =========================
-
-                risk = df_mun["risk_norm"].values[0]
-
-                # Classificação do nível de risco
-                p33 = df["risk_norm"].quantile(0.33)
-                p66 = df["risk_norm"].quantile(0.66)
-
-                if risk > p66:
-                    nivel = "alto"
-                elif risk > p33:
-                    nivel = "moderado"
-                else:
-                    nivel = "baixo"
-
-                # Subíndices
-                drivers = {
-                    "Hazard": hazard,
-                    "Exposure": exposure,
-                    "Vulnerability": vulnerability
-                }
-
-                main_driver = max(drivers, key=drivers.get)
-                min_driver = min(drivers, key=drivers.get)
-
-                posicao = (df["risk_norm"] < risk).mean()
-
-                if posicao > 0.66:
-                    pos_text = "entre os municípios de maior risco no estado"
-                elif posicao > 0.33:
-                    pos_text = "em posição intermediária no estado"
-                else:
-                    pos_text = "entre os municípios de menor risco no estado"
-
-                # =========================
-                # VARIÁVEL DOMINANTE DENTRO DO DRIVER
-                # =========================
-
-                if main_driver == "Hazard":
-                    vars_dict = {
-                        "déficit hídrico": df_mun["def_mean"].values[0],
-                        "variabilidade da precipitação": df_mun["ppt_std"].values[0],
-                        "variabilidade do vento": df_mun["ws_std"].values[0],
-                        "amplitude térmica": df_mun["dtr_mean"].values[0]
-                    }
-
-                elif main_driver == "Exposure":
-                    vars_dict = {
-                        "empregos industriais per capita": df_mun["empregos_pc"].values[0],
-                        "empresas industriais per capita": df_mun["empresas_pc"].values[0]
-                    }
-
-                else:
-                    vars_dict = {
-                        "intensidade energética": df_mun["energia_norm"].values[0],
-                        "concentração setorial": df_mun["hhi_norm"].values[0],
-                        "resiliência da renda": df_mun["pib_pc_inv"].values[0]
-                    }
-
-                main_variable = max(vars_dict, key=vars_dict.get)
-
-                # =========================
-                # LÓGICA DE POLÍTICA (AJUSTE EXPOSURE)
-                # =========================
-
-                if main_driver == "Exposure":
-
-                    # Ordena drivers para pegar o segundo mais relevante
-                    drivers_sorted = sorted(drivers.items(), key=lambda x: x[1], reverse=True)
-                    second_driver = drivers_sorted[1][0]
-
-                    # Identifica variável dominante do segundo driver
-                    if second_driver == "Hazard":
-                        second_vars = {
-                            "déficit hídrico": df_mun["def_mean"].values[0],
-                            "variabilidade da precipitação": df_mun["ppt_std"].values[0],
-                            "variabilidade do vento": df_mun["ws_std"].values[0],
-                            "amplitude térmica": df_mun["dtr_mean"].values[0]
-                        }
-
-                    else:  # Vulnerability
-                        second_vars = {
-                            "intensidade energética": df_mun["energia_norm"].values[0],
-                            "concentração setorial": df_mun["hhi_norm"].values[0],
-                            "resiliência da renda": df_mun["pib_pc_inv"].values[0]
-                        }
-
-                    second_variable = max(second_vars, key=second_vars.get)
-
-                    politica_texto = f"""
-                Sendo a **Exposure** o principal driver, o nível de risco reflete sobretudo o volume de atividade econômica exposta.
-                Nesse contexto, políticas de mitigação devem atuar sobre **{second_driver.lower()}**, 
-                com foco em **{second_variable}**, reduzindo a sensibilidade do sistema produtivo a choques climáticos.
-                """
-
-                else:
-
-                    politica_texto = f"""
-                Do ponto de vista econômico, isso sugere que intervenções direcionadas a **{main_driver.lower()}**, 
-                especialmente sobre **{main_variable}**, tendem a gerar maior efetividade na mitigação do risco climático industrial.
-                """
-
-                # =========================
-                # CONDIÇÃO DE ANULAÇÃO (< 0.1)
-                # =========================
-
-                if drivers[min_driver] < 0.1:
-                    anulacao_texto = f"""
-                Observa-se que a dimensão **{min_driver}** apresenta valor muito reduzido, 
-                atuando como fator limitante do risco agregado. Na formulação multiplicativa 
-                do índice, essa baixa intensidade contribui para **atenuar o risco total**, 
-                mesmo na presença de valores mais elevados nas demais dimensões.
-                """
-                else:
-                    anulacao_texto = ""
-
-                # =========================
-                # COMPARAÇÃO COM SC
-                # =========================
-
-                media_sc = df["risk_norm"].mean()
-
-                if risk > media_sc:
-                    comp = "acima"
-                else:
-                    comp = "abaixo"
-
-                # =========================
-                # TEXTO FINAL
-                # =========================
-
-                texto = f"""
-                Em uma comparação intermunicipal, o município apresenta um nível **{nivel} de risco climático industrial** 
-                (índice = {risk:.2f}), situando-se {pos_text}.
-
-                A decomposição do índice indica que o principal fator de risco é **{main_driver}**, 
-                com destaque para **{main_variable}** como principal componente explicativo dentro dessa dimensão.
-
-                {politica_texto}
-
-                {anulacao_texto}
-                """
+                texto = gerar_texto_insight(df, df_mun)
 
                 # =========================
                 # BOX VISUAL
@@ -1210,7 +1079,6 @@ with tab4:
                     ">
                         {texto}
 
-                </div>
                 """, unsafe_allow_html=True)
 
 # ECONOMIC INSIGHTS
@@ -1247,6 +1115,11 @@ with tab5:
             corr_sub,
             text_auto=True,
             aspect="auto"
+        )
+        fig_corr.update_traces(
+            hovertemplate=
+            "%{y} × %{x}<br>" +
+            "Correlação: %{z:.2f}<extra></extra>"
         )
 
         fig_corr.update_layout(
@@ -1315,7 +1188,7 @@ with tab5:
             # Exposure
             "empregos_pc", "empresas_pc",
             # Vulnerability
-            "energia_norm", "hhi_norm", "pib_pc_inv"
+            "energia_norm", "agro_pc_norm", "pib_pc_inv"
         ]
 
         corr_vars = df[vars_cols].corr()
@@ -1329,7 +1202,7 @@ with tab5:
             "empregos_pc": "Empregos industriais per capita",
             "empresas_pc": "Empresas industriais per capita",
             "energia_norm": "Intensidade energética",
-            "hhi_norm": "Concentração setorial",
+            "agro_pc_norm": "Sensibilidade da produção agrícola",
             "pib_pc_inv": "Resiliência da renda"
         }
 
@@ -1339,6 +1212,11 @@ with tab5:
             corr_vars,
             text_auto=False,
             aspect="auto"
+        )
+        fig_corr2.update_traces(
+            hovertemplate=
+            "%{y} × %{x}<br>" +
+            "Correlação: %{z:.2f}<extra></extra>"
         )
 
         fig_corr2.update_layout(
