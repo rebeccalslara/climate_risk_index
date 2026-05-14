@@ -1,139 +1,194 @@
-[READ ME_climateriskindex.txt](https://github.com/user-attachments/files/27140168/READ.ME_climateriskindex.txt)
-# Climate Risk Index – Industrial Sector (Santa Catarina, Brazil)
+# Climate Risk Index - Industrial Sector (Santa Catarina, Brazil)
 
 ## Overview
 
-This project develops a Climate Risk Index for the industrial sector across municipalities in Santa Catarina (Brazil), adapting the conceptual framework of the IPCC (AR5).
+This project develops a municipal Climate Risk Index for the industrial sector in Santa Catarina, Brazil. The index adapts the IPCC AR5 risk framework to measure relative climate risk across the state's 295 municipalities.
 
-The index quantifies relative climate risk exposure of local industrial structures, integrating climatic conditions, economic exposure, and structural vulnerability.
+The current version expands the project from a single-year index into a 2002-2023 time series. This allows the dashboard to compare municipalities in a selected year and prepares the project for future analysis of how changes in climate risk relate to fiscal and economic outcomes.
 
-The model follows the widely used formulation:
+The model follows:
 
-> Risk = Hazard × Exposure × Vulnerability
+```text
+Risk = Hazard x Exposure x Vulnerability
+```
 
----
+The final risk score is normalized within each year, so municipalities are compared against the state distribution for that year.
 
 ## Methodology
 
-The index is constructed as a multiplicative interaction of three dimensions:
+### Hazard
 
-### Hazard (Climate Conditions)
+The hazard index captures climate variability and climate stress using TerraClimate-based indicators:
 
-Captures climate variability and extremes using:
+- Mean water deficit: `def_mean`
+- Precipitation variability: `ppt_std`
+- Wind speed variability: `ws_std`
+- Diurnal temperature range: `dtr_mean`
 
-* Mean water deficit (`def_mean`)
-* Precipitation variability (`ppt_std`)
-* Wind variability (`ws_std`)
-* Diurnal temperature range (`dtr_mean`)
+Each variable is normalized by year, producing:
 
-These variables represent both structural climate conditions and extreme events.
+- `def_mean_norm`
+- `ppt_std_norm`
+- `ws_std_norm`
+- `dtr_mean_norm`
 
----
+The hazard index is calculated from the normalized hazard components.
 
-### Exposure (Industrial Activity)
+### Exposure
 
-Measures how exposed local economies are to climate shocks:
+The exposure index measures the size and concentration of municipal industrial activity exposed to climate shocks:
 
-* Industrial employment per capita (`empregos_pc`)
-* Number of firms per capita (`empresas_pc`)
+- Industrial employment per capita: `empregos_pc`
+- Industrial firms per capita: `empresas_pc`
 
-This captures the **intensity of economic activity at risk**.
+Both variables are normalized by year:
 
----
+- `empregos_pc_norm`
+- `empresas_pc_norm`
 
-### Vulnerability (Structural Sensitivity)
+The exposure index is the mean of the normalized exposure variables.
 
-Reflects economic sensitivity and adaptive capacity:
+### Vulnerability
 
-* Industrial energy intensity (`energia_norm`)
-* Agricultural sensitivity (`agro_pc_norm`)
-* Income resilience (`pib_pc_inv`)
+The vulnerability index captures structural sensitivity and adaptive capacity:
 
-Higher values indicate greater susceptibility to climate-related impacts.
+- Industrial energy consumption per capita: `energia_pc`
+- Real GDP per capita, inverted after normalization: `pib_pc_inv`
+- Real agricultural production value per capita: `agro_pc`
 
----
+Energy consumption is calculated using CELESC industrial consumption only. GDP is deflated with the GDP implicit deflator. Agricultural production is deflated with IGP-DI.
+
+The vulnerability components used in the final index are:
+
+- `energia_pc_norm`
+- `pib_pc_inv`
+- `agro_pc_norm`
+
+The vulnerability index is the mean of these three normalized variables.
+
+## Time Series
+
+The pipeline covers the years 2002-2023.
+
+All sub-indexes are calculated by municipality and year. The final dataset contains:
+
+```text
+295 municipalities x 22 years = 6,490 records
+```
+
+This structure supports year-by-year analysis in the Streamlit dashboard and future panel-data modeling.
+
+## Missing Data And Harmonization Rules
+
+Municipality names are normalized consistently across scripts by removing accents, uppercasing text, replacing hyphens and apostrophes with spaces, and collapsing duplicate spaces. This is important for special cases such as:
+
+- `HERVAL D'OESTE` / `HERVAL D OESTE`
+- `GRAO PARA`
+
+Specific missing-data treatment:
+
+- Energy data: municipalities present in CELESC but not in the Santa Catarina population universe are discarded. Municipalities in the population universe but missing from CELESC receive the mesoregion average energy consumption.
+- GDP data: `PESCARIA BRAVA` and `BALNEARIO RINCAO` receive mesoregion averages for years before their own municipal data are available.
+- Agricultural production: only `PESCARIA BRAVA` and `BALNEARIO RINCAO` receive mesoregion averages for early missing years. Other missing agricultural values are treated as zero activity when the municipality has no reported agricultural production.
+- The final map merge is checked against the 295-municipality shapefile.
 
 ## Data Sources
 
-* TerraClimate – climate variables
-* **IBGE / SIDRA – economic indicators
-* RAIS – industrial structure
-* CELESC – energy data
+Main data sources include:
 
-All data were harmonized at the municipal level.
+- TerraClimate climate variables
+- RAIS industrial structure
+- CELESC municipal energy consumption
+- IBGE/SIDRA economic and agricultural indicators
+- Population interpolation dataset for 2002-2023
+- Santa Catarina municipal shapefiles
 
----
-
-## Outputs
-
-Main outputs generated by the pipeline:
-
-* `climate_risk_index_sc_2025_new.csv` → full dataset
-* `climate_risk_ranking_sc_2025_new.csv` → ranking
-* `dashboard_dataset_sc_2025.csv` → dashboard input
-* `map_climate_risk_sc_2025.png` → spatial visualization
-
----
-
-## Dashboard
-
-An interactive dashboard is available via Streamlit:
-
-https://climateriskindex-a9y7kuratteozvnmn37bey.streamlit.app/
-
-### Run locally
-
-```bash
-pip install -r requirements.txt
-streamlit run diretorios/climate_risk_index/app/app.py
-```
-
----
+Raw data are stored locally under `diretorios/climate_risk_index/data/raw_data/`. Large raw files are ignored by Git.
 
 ## Project Structure
 
+```text
+diretorios/climate_risk_index/
+|
+|-- app/
+|   |-- app2.py                         # Main Streamlit dashboard
+|
+|-- data/
+|   |-- raw_data/                       # Original input files
+|   |-- data_handling/                  # Intermediate handled datasets
+|
+|-- output/                            # Final app-ready outputs
+|   |-- climate_risk_index_2002_2023.csv
+|   |-- dashboard_dataset_2002_2023.csv
+|   |-- exposure_index_2002_2023.csv
+|   |-- hazard_index_2002_2023.csv
+|   |-- vulnerability_index_2002_2023.csv
+|   |-- map_climate_risk_sc_2023.png
+|
+|-- script/
+|   |-- exposure.py                     # Builds exposure time series
+|   |-- hazard.py                       # Builds hazard time series
+|   |-- vulnerability.py                # Builds vulnerability time series
+|   |-- climate_risk_index.py           # Combines sub-indexes into final risk index
+|
+|-- .gitignore
 ```
-climate_risk_index/
-│
-├── data/
-│   ├── raw_data/
-│   └── processed_data/
-│
-├── outputs/
-│   ├── final datasets
-│   └── maps
-│
-├── script/
-│   ├── climate_risk_index.py
-│   └── vulnerability.py
-│   └── exposure.py
-│   └── hazard.py
-│
-├── app/
-│   └── app.py
-│
-└── README.md
+
+## Pipeline
+
+Run the scripts in this order:
+
+```bash
+python diretorios/climate_risk_index/script/exposure.py
+python diretorios/climate_risk_index/script/hazard.py
+python diretorios/climate_risk_index/script/vulnerability.py
+python diretorios/climate_risk_index/script/climate_risk_index.py
 ```
 
----
+The sub-index scripts save raw and normalized intermediate files in `data/data_handling/`. Final index files used by the dashboard are saved in `output/`.
 
-## Key Features
+## Dashboard
 
-* IPCC-consistent risk framework
-* Municipal-level analysis (295 municipalities)
-* Integration of climate and economic data
-* Interactive dashboard for exploration
-* Fully reproducible pipeline
+The Streamlit dashboard is implemented in:
 
----
+```text
+diretorios/climate_risk_index/app/app2.py
+```
+
+Run locally with:
+
+```bash
+streamlit run diretorios/climate_risk_index/app/app2.py
+```
+
+Dashboard features include:
+
+- Year selector for the 2002-2023 time series
+- Municipal risk ranking
+- Interactive map of climate risk
+- Detailed municipality view
+- Municipality comparison
+- Statistical insights, including risk distribution, mismatch analysis, and correlation matrices
+
+## Current Outputs
+
+The main dashboard dataset is:
+
+```text
+diretorios/climate_risk_index/output/dashboard_dataset_2002_2023.csv
+```
+
+It includes the final risk score, sub-indexes, normalized component variables, rankings, and variables used by the dashboard.
+
+## Planned Extension
+
+The next project step is an economic impact module focused on municipal fiscal expenditure. The planned approach is a panel-data model using the climate risk index time series and municipal expenditure data, with municipality and year fixed effects.
 
 ## Author
 
-Rebecca Lorandi Silveira Lara
-Industrial Economics Researcher – Observatório FIESC
-
----
+Rebecca Lorandi Silveira Lara  
+Industrial Economics Researcher - Observatório FIESC
 
 ## Notes
 
-This project is intended for research and analytical purposes, supporting climate risk assessment and regional economic policy analysis.
+This project is intended for research and policy analysis. The index is relative and should be interpreted as a comparative measure of municipal climate risk within Santa Catarina, not as an absolute probability of climate loss.
