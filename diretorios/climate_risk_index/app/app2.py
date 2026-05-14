@@ -319,27 +319,34 @@ mesoregiao_path = BASE_DIR / "data" / "raw_data" / "shapes" / "42MEE250GC_SIR.sh
 # =========================
 
 @st.cache_data
-def load_data(data_mtime, hazard_norm_mtime):
+def load_data(data_mtime):
     df = pd.read_csv(data_path)
     hazard_norm_cols = ["def_mean_norm", "ppt_std_norm", "ws_std_norm", "dtr_mean_norm"]
     missing_hazard_norm_cols = [col for col in hazard_norm_cols if col not in df.columns]
     if missing_hazard_norm_cols:
-        hazard_norm = pd.read_csv(hazard_norm_path)
-        hazard_norm["municipio"] = hazard_norm["municipio"].apply(normalize_text)
-        hazard_norm["ano"] = pd.to_numeric(hazard_norm["ano"], errors="coerce").astype(int)
-        df["municipio"] = df["municipio"].apply(normalize_text)
-        df["ano"] = pd.to_numeric(df["ano"], errors="coerce").astype(int)
-        df = df.merge(
-            hazard_norm[["municipio", "ano"] + hazard_norm_cols],
-            on=["municipio", "ano"],
-            how="left"
-        )
+        if hazard_norm_path.exists():
+            hazard_norm = pd.read_csv(hazard_norm_path)
+            hazard_norm["municipio"] = hazard_norm["municipio"].apply(normalize_text)
+            hazard_norm["ano"] = pd.to_numeric(hazard_norm["ano"], errors="coerce").astype(int)
+            df["municipio"] = df["municipio"].apply(normalize_text)
+            df["ano"] = pd.to_numeric(df["ano"], errors="coerce").astype(int)
+            df = df.merge(
+                hazard_norm[["municipio", "ano"] + hazard_norm_cols],
+                on=["municipio", "ano"],
+                how="left"
+            )
+        else:
+            st.error(
+                "The dashboard dataset is missing normalized hazard columns. "
+                "Regenerate output/dashboard_dataset_2002_2023.csv with script/climate_risk_index.py."
+            )
+            st.stop()
     gdf = gpd.read_file(shapefile_path, engine="pyogrio")
     gdf["geometry"] = gdf["geometry"].simplify(0.01)
     gdf_meso = gpd.read_file(mesoregiao_path, engine="pyogrio")
     return df, gdf, gdf_meso
 
-df_all, gdf_map, gdf_meso = load_data(data_path.stat().st_mtime, hazard_norm_path.stat().st_mtime)
+df_all, gdf_map, gdf_meso = load_data(data_path.stat().st_mtime)
 
 # =========================
 # DETECTAR COLUNA MUNICÍPIO
