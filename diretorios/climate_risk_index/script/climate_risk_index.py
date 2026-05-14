@@ -10,6 +10,7 @@ Inputs:
 
 Additional component inputs for dashboard/detail columns:
   data/data_handling/hazard_raw_2002_2023.csv
+  data/data_handling/hazard_normalized_2002_2023.csv
   data/data_handling/exposure_per_capita_normalized_2002_2023.csv
   data/data_handling/vulnerability_normalized_2002_2023.csv
 
@@ -144,6 +145,10 @@ df_hazard_raw = pd.read_csv(DATA_HANDLING_DIR / "hazard_raw_2002_2023.csv")
 df_hazard_raw = clean_municipio_column(df_hazard_raw)
 df_hazard_raw["ano"] = pd.to_numeric(df_hazard_raw["ano"], errors="coerce").astype(int)
 
+df_hazard_norm = pd.read_csv(DATA_HANDLING_DIR / "hazard_normalized_2002_2023.csv")
+df_hazard_norm = clean_municipio_column(df_hazard_norm)
+df_hazard_norm["ano"] = pd.to_numeric(df_hazard_norm["ano"], errors="coerce").astype(int)
+
 df_exposure_detail = pd.read_csv(DATA_HANDLING_DIR / "exposure_per_capita_normalized_2002_2023.csv")
 df_exposure_detail = clean_municipio_column(df_exposure_detail)
 df_exposure_detail["ano"] = pd.to_numeric(df_exposure_detail["ano"], errors="coerce").astype(int)
@@ -166,6 +171,14 @@ df = (
     .merge(
         df_hazard_raw[[
             "municipio", "ano", "def_mean", "ppt_std", "ws_std", "dtr_mean"
+        ]],
+        on=["municipio", "ano"],
+        how="left",
+    )
+    .merge(
+        df_hazard_norm[[
+            "municipio", "ano",
+            "def_mean_norm", "ppt_std_norm", "ws_std_norm", "dtr_mean_norm"
         ]],
         on=["municipio", "ano"],
         how="left",
@@ -221,6 +234,7 @@ col_order = [
     "climate_risk_index", "risk_norm", "rank_risk",
     "hazard_mean", "hazard_max",
     "def_mean", "ppt_std", "ws_std", "dtr_mean",
+    "def_mean_norm", "ppt_std_norm", "ws_std_norm", "dtr_mean_norm",
     "empregos_pc", "empresas_pc", "empregos_pc_norm", "empresas_pc_norm",
     "energia_pc", "pib_real_pc", "agro_real_pc",
     "energia_pc_norm", "pib_pc_inv", "agro_pc_norm",

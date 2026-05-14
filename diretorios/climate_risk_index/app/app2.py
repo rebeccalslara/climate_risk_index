@@ -64,13 +64,20 @@ st.markdown("""
 
 /* ABOUT BUTTON STYLING */
 [data-testid="stSidebar"] button {
-    background-color: transparent !important;
-    border: 1px solid white !important;
+    background-color: #171717 !important;
+    border: none !important;
     color: white !important;
-    padding: 0.5rem 1rem !important;
-    border-radius: 4px !important;
+    padding: 0.55rem 0.75rem !important;
+    border-radius: 6px !important;
     font-weight: 600 !important;
-    margin: 0 !important;
+    margin: 0 0 0.75rem 0 !important;
+    text-align: left !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stSidebar"] button:hover {
+    background-color: #1f2937 !important;
+    color: #93c5fd !important;
 }
 
 /* REMOVE SPACING FROM SIDEBAR ELEMENTS */
@@ -247,7 +254,7 @@ def titulo_h3(texto):
     )
 
 # =========================
-# FUNÃ‡Ã•ES
+# FUNÇÕES
 # =========================
 
 def normalize_text(text):
@@ -257,10 +264,11 @@ def normalize_text(text):
     text = str(text)
 
     text = text.replace("-", " ")
+    text = text.replace("'", " ")
 
     text = unicodedata.normalize('NFKD', text).encode('ASCII', 'ignore').decode('ASCII')
     
-    return text.upper().strip()
+    return " ".join(text.upper().split())
 
 # TABELA ESTILIZADA (CORRIGIDA)
 def styled_table(df_input, font_size="14px"):
@@ -298,12 +306,13 @@ def styled_table(df_input, font_size="14px"):
     return html_table
 
 # =========================
-# PATHS (COMPATÃVEL COM STREAMLIT CLOUD)
+# PATHS (COMPATÍVEL COM STREAMLIT CLOUD)
 # =========================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 data_path = BASE_DIR / "output" / "dashboard_dataset_2002_2023.csv"
+hazard_norm_path = BASE_DIR / "data" / "data_handling" / "hazard_normalized_2002_2023.csv"
 shapefile_path = BASE_DIR / "data" / "raw_data" / "shapes" / "SC_Municipios_2025.shp"
 mesoregiao_path = BASE_DIR / "data" / "raw_data" / "shapes" / "42MEE250GC_SIR.shp"
 
@@ -312,17 +321,30 @@ mesoregiao_path = BASE_DIR / "data" / "raw_data" / "shapes" / "42MEE250GC_SIR.sh
 # =========================
 
 @st.cache_data
-def load_data():
+def load_data(data_mtime, hazard_norm_mtime):
     df = pd.read_csv(data_path)
+    hazard_norm_cols = ["def_mean_norm", "ppt_std_norm", "ws_std_norm", "dtr_mean_norm"]
+    missing_hazard_norm_cols = [col for col in hazard_norm_cols if col not in df.columns]
+    if missing_hazard_norm_cols:
+        hazard_norm = pd.read_csv(hazard_norm_path)
+        hazard_norm["municipio"] = hazard_norm["municipio"].apply(normalize_text)
+        hazard_norm["ano"] = pd.to_numeric(hazard_norm["ano"], errors="coerce").astype(int)
+        df["municipio"] = df["municipio"].apply(normalize_text)
+        df["ano"] = pd.to_numeric(df["ano"], errors="coerce").astype(int)
+        df = df.merge(
+            hazard_norm[["municipio", "ano"] + hazard_norm_cols],
+            on=["municipio", "ano"],
+            how="left"
+        )
     gdf = gpd.read_file(shapefile_path, engine="pyogrio")
     gdf["geometry"] = gdf["geometry"].simplify(0.01)
     gdf_meso = gpd.read_file(mesoregiao_path, engine="pyogrio")
     return df, gdf, gdf_meso
 
-df_all, gdf_map, gdf_meso = load_data()
+df_all, gdf_map, gdf_meso = load_data(data_path.stat().st_mtime, hazard_norm_path.stat().st_mtime)
 
 # =========================
-# DETECTAR COLUNA MUNICÃPIO
+# DETECTAR COLUNA MUNICÍPIO
 # =========================
 
 possible_cols = ["NM_MUN", "NOME_MUN", "NM_MUNICIP", "municipio", "name"]
@@ -334,11 +356,19 @@ for col in gdf_map.columns:
         break
 
 if col_municipio is None:
-    st.error(f"Colunas disponÃ­veis: {list(gdf_map.columns)}")
+    st.error(f"Colunas disponíveis: {list(gdf_map.columns)}")
     st.stop()
 
 gdf_map["municipio"] = gdf_map[col_municipio].apply(normalize_text)
 df_all["municipio"] = df_all["municipio"].apply(normalize_text)
+
+# =========================
+# SIDEBAR - FIXED NAVIGATION
+# =========================
+
+# ABOUT BUTTON
+if st.sidebar.button("About", use_container_width=True):
+    st.session_state["show_about"] = not st.session_state.get("show_about", False)
 
 available_years = sorted(df_all["ano"].dropna().astype(int).unique())
 ano_selecionado = st.sidebar.selectbox(
@@ -354,7 +384,7 @@ gdf_final = gdf_map.merge(df, on="municipio", how="left")
 df["municipio_nome"] = df["municipio"].str.title()
 
 # =========================
-# BUILD MESOREGIÃƒO INDICES
+# BUILD MESOREGIÃO INDICES
 # =========================
 
 # Spatial join using centroid: assign municipality to mesoregion
@@ -390,14 +420,6 @@ if meso_col:
 else:
     mesoregiao_indices = pd.DataFrame()
 
-# =========================
-# SIDEBAR - FIXED NAVIGATION
-# =========================
-
-# ABOUT BUTTON
-if st.sidebar.button("About", use_container_width=True):
-    st.session_state["show_about"] = not st.session_state.get("show_about", False)
-
 # Display About Box when button is clicked
 if st.session_state.get("show_about", False):
     st.markdown("""
@@ -412,54 +434,54 @@ if st.session_state.get("show_about", False):
     
     <h3 style="color:#a50f15;">Metodologia</h3>
     <p style="color:#e5e7eb; line-height:1.6;">
-    Este projeto apresenta uma <b>adaptaÃ§Ã£o do Ã­ndice de risco climÃ¡tico do IPCC (AR5)</b> para o contexto industrial dos municÃ­pios de Santa Catarina. O modelo segue o framework conceitual amplamente utilizado na literatura de risco climÃ¡tico, no qual o risco Ã© definido como a interaÃ§Ã£o entre trÃªs dimensÃµes fundamentais:
+    Este projeto apresenta uma <b>adaptação do índice de risco climático do IPCC (AR5)</b> para o contexto industrial dos municípios de Santa Catarina. O modelo segue o framework conceitual amplamente utilizado na literatura de risco climático, no qual o risco é definido como a interação entre três dimensões fundamentais:
     </p>
     
     <div style="text-align:center; margin:20px 0;">
         <span style="font-size:20px; font-weight:500; color:white;">
-            Risk = Hazard Ã— Exposure Ã— Vulnerability
+            Risk = Hazard × Exposure × Vulnerability
         </span>
     </div>
     
     <p style="color:#e5e7eb; line-height:1.6;">
-    Essa formulaÃ§Ã£o, adotada por organismos internacionais como o IPCC e o UNDRR, entende o risco como um fenÃ´meno sistÃªmico, resultante da combinaÃ§Ã£o entre condiÃ§Ãµes climÃ¡ticas adversas, a exposiÃ§Ã£o de ativos econÃ´micos e a vulnerabilidade estrutural dos sistemas analisados. A formulaÃ§Ã£o multiplicativa implica que a ausÃªncia ou baixa intensidade de qualquer componente reduz significativamente o risco total, evitando compensaÃ§Ãµes indevidas entre fatores.
+    Essa formulação, adotada por organismos internacionais como o IPCC e o UNDRR, entende o risco como um fenômeno sistêmico, resultante da combinação entre condições climáticas adversas, a exposição de ativos econômicos e a vulnerabilidade estrutural dos sistemas analisados. A formulação multiplicativa implica que a ausência ou baixa intensidade de qualquer componente reduz significativamente o risco total, evitando compensações indevidas entre fatores.
     </p>
     
     <p style="color:#e5e7eb; line-height:1.6;">
-    Neste trabalho, o modelo foi adaptado para capturar especificamente o <b>risco climÃ¡tico sobre a estrutura produtiva industrial municipal</b>, incorporando variÃ¡veis que refletem a dinÃ¢mica regional.
+    Neste trabalho, o modelo foi adaptado para capturar especificamente o <b>risco climático sobre a estrutura produtiva industrial municipal</b>, incorporando variáveis que refletem a dinâmica regional.
     </p>
     
     <blockquote style="color:#9ca3af; border-left:3px solid #4292c6; padding-left:15px; margin:15px 0;">
-    O Ã­ndice resultante representa o <b>nÃ­vel relativo de risco climÃ¡tico associado Ã  atividade industrial municipal</b>. Valores variam entre 0 e 1, sendo que os mais elevados indicam maior suscetibilidade a impactos econÃ´micos decorrentes de choques climÃ¡ticos.
+    O índice resultante representa o <b>nível relativo de risco climático associado à atividade industrial municipal</b>. Valores variam entre 0 e 1, sendo que os mais elevados indicam maior suscetibilidade a impactos econômicos decorrentes de choques climáticos.
     </blockquote>
     
-    <h3 style="color:#a50f15;">ConstruÃ§Ã£o dos Ã­ndices</h3>
+    <h3 style="color:#a50f15;">Construção dos índices</h3>
     
-    <h4 style="color:#a50f15;">Hazard (Perigo climÃ¡tico)</h4>
+    <h4 style="color:#a50f15;">Hazard (Perigo climático)</h4>
     <p style="color:#e5e7eb; line-height:1.6;">
-    O Ã­ndice de hazard foi construÃ­do a partir de variÃ¡veis climÃ¡ticas que capturam tanto a variabilidade quanto a ocorrÃªncia de extremos, incluindo dÃ©ficit hÃ­drico mÃ©dio (<code>def_mean</code>), variabilidade da precipitaÃ§Ã£o (<code>ppt_std</code>), variabilidade da velocidade do vento (<code>ws_std</code>) e amplitude tÃ©rmica diÃ¡ria (<code>dtr_mean</code>).
+    O índice de hazard foi construído a partir de variáveis climáticas que capturam tanto a variabilidade quanto a ocorrência de extremos, incluindo déficit hídrico médio (<code>def_mean</code>), variabilidade da precipitação (<code>ppt_std</code>), variabilidade da velocidade do vento (<code>ws_std</code>) e amplitude térmica diária (<code>dtr_mean</code>).
     </p>
     
     <p style="color:#e5e7eb; line-height:1.6;">
-    A agregaÃ§Ã£o combina a mÃ©dia dessas variÃ¡veis, representando as condiÃ§Ãµes climÃ¡ticas estruturais, com o valor mÃ¡ximo, de modo a incorporar eventos extremos. Essa abordagem estÃ¡ alinhada com a literatura climÃ¡tica, que destaca o papel desproporcional de eventos extremos na geraÃ§Ã£o de danos econÃ´micos, especialmente em sistemas industriais sensÃ­veis a choques abruptos.
+    A agregação combina a média dessas variáveis, representando as condições climáticas estruturais, com o valor máximo, de modo a incorporar eventos extremos. Essa abordagem está alinhada com a literatura climática, que destaca o papel desproporcional de eventos extremos na geração de danos econômicos, especialmente em sistemas industriais sensíveis a choques abruptos.
     </p>
     
-    <h4 style="color:#a50f15;">Exposure (ExposiÃ§Ã£o)</h4>
+    <h4 style="color:#a50f15;">Exposure (Exposição)</h4>
     <p style="color:#e5e7eb; line-height:1.6;">
-    O Ã­ndice de exposiÃ§Ã£o mensura o grau em que a atividade econÃ´mica municipal estÃ¡ sujeita a riscos climÃ¡ticos, utilizando indicadores per capita de empregos industriais (<code>empregos_pc</code>) e nÃºmero de empresas (<code>empresas_pc</code>).
+    O índice de exposição mensura o grau em que a atividade econômica municipal está sujeita a riscos climáticos, utilizando indicadores normalizados de empregos industriais per capita (<code>empregos_pc_norm</code>) e número de empresas per capita (<code>empresas_pc_norm</code>).
     </p>
     
     <p style="color:#e5e7eb; line-height:1.6;">
-    A utilizaÃ§Ã£o de mÃ©tricas per capita e sua agregaÃ§Ã£o por mÃ©dia simples permitem capturar a <b>intensidade relativa da atividade industrial exposta</b>, garantindo comparabilidade entre municÃ­pios com diferentes escalas populacionais.
+    A utilização de métricas per capita e sua agregação por média simples permitem capturar a <b>intensidade relativa da atividade industrial exposta</b>, garantindo comparabilidade entre municípios com diferentes escalas populacionais.
     </p>
     
     <h4 style="color:#a50f15;">Vulnerability (Vulnerabilidade)</h4>
     <p style="color:#e5e7eb; line-height:1.6;">
-    A vulnerabilidade reflete a sensibilidade climÃ¡tica e energÃ©tica e a capacidade adaptativa da renda, sendo composta por trÃªs dimensÃµes principais: intensidade energÃ©tica industrial per capita (<code>energia_pc_norm</code>), valor da produÃ§Ã£o agrÃ­cola per capita (<code>agro_pc_norm</code>) e renda per capita (<code>pib_pc_inv</code>).
+    A vulnerabilidade reflete a sensibilidade climática e energética e a capacidade adaptativa da renda, sendo composta por três dimensões principais: intensidade energética industrial per capita (<code>energia_pc_norm</code>), valor da produção agrícola per capita (<code>agro_pc_norm</code>) e renda per capita (<code>pib_pc_inv</code>).
     </p>
     
     <p style="color:#e5e7eb; line-height:1.6;">
-    Esse conjunto de variÃ¡veis captura a sensibilidade dos municÃ­pios a choques energÃ©ticos e climaticos do setor agrÃ­cola, bem como sua capacidade adaptativa, aproximada pela renda disponÃ­vel para resposta e reconstruÃ§Ã£o. A agregaÃ§Ã£o foi realizada por meio de mÃ©dia simples, assumindo contribuiÃ§Ã£o equilibrada entre os fatores estruturais.
+    Esse conjunto de variáveis captura a sensibilidade dos municípios a choques energéticos e climáticos, bem como sua capacidade adaptativa, aproximada pela renda disponível para resposta e reconstrução. A agregação foi realizada por meio de média simples, assumindo contribuição equilibrada entre os fatores estruturais.
     </p>
     
     <hr style="border:0.5px solid #374151; margin:20px 0;">
@@ -468,19 +490,19 @@ if st.session_state.get("show_about", False):
         <div style="flex:1;">
             <h4 style="color:#a50f15;">Nota sobre os dados</h4>
             <p style="color:#9ca3af; font-size:13px; line-height:1.6;">
-            Os dados utilizados sÃ£o provenientes de bases oficiais e amplamente reconhecidas, incluindo TerraClimate (variÃ¡veis climÃ¡ticas), SIDRA/IBGE (indicadores econÃ´micos), RAIS (estrutura produtiva) e CELESC (dados energÃ©ticos).
+            Os dados utilizados são provenientes de bases oficiais e amplamente reconhecidas, incluindo TerraClimate (variáveis climáticas), SIDRA/IBGE (indicadores econômicos), RAIS (estrutura produtiva), CELESC (dados energéticos) e IPEADATA (Indices de deflação).
             </p>
             <p style="color:#9ca3af; font-size:13px; line-height:1.6;">
-            Todas as variÃ¡veis foram previamente tratadas, normalizadas e harmonizadas ao nÃ­vel municipal, assegurando consistÃªncia e comparabilidade entre as unidades de anÃ¡lise.
+            Todas as variáveis foram previamente tratadas, normalizadas e harmonizadas ao nível municipal, assegurando consistência e comparabilidade entre as unidades de análise.
             </p>
         </div>
         <div style="flex:1;">
-            <h4 style="color:#a50f15;">ConsideraÃ§Ãµes finais</h4>
+            <h4 style="color:#a50f15;">Considerações finais</h4>
             <p style="color:#9ca3af; font-size:13px; line-height:1.6;">
-            O Ã­ndice proposto constitui uma ferramenta analÃ­tica para a identificaÃ§Ã£o de <b>hotspots de risco climÃ¡tico industrial em Santa Catarina</b>, podendo subsidiar a formulaÃ§Ã£o de polÃ­ticas pÃºblicas, estratÃ©gias de adaptaÃ§Ã£o e anÃ¡lises econÃ´micas regionais sob a perspectiva das mudanÃ§as climÃ¡ticas.
+            O índice proposto constitui uma ferramenta analítica para a identificação de <b>hotspots de risco climático industrial em Santa Catarina</b>, podendo subsidiar a formulação de políticas públicas, estratégias de adaptação e análises econômicas regionais sob a perspectiva das mudanças climáticas.
             </p>
             <p style="color:#9ca3af; font-size:13px; line-height:1.6;">
-            Trata-se de uma medida relativa, adaptada ao contexto regional, que mantÃ©m aderÃªncia ao arcabouÃ§o conceitual do IPCC.
+            Trata-se de uma medida relativa, adaptada ao contexto regional, que mantém aderência ao arcabouço conceitual do IPCC.
             </p>
         </div>
     </div>
@@ -491,38 +513,38 @@ if st.session_state.get("show_about", False):
 municipios = sorted(df["municipio_nome"].unique())
 
 municipio_selecionado = st.sidebar.selectbox(
-    "Selecione um municÃ­pio:",
+    "Selecione um município:",
     ["Todos"] + municipios
 )
 
 modo_analise = st.sidebar.radio(
-    "Modo de anÃ¡lise:",
-    ["Individual", "ComparaÃ§Ã£o"]
+    "Modo de análise:",
+    ["Individual", "Comparação"]
 )
 
-# Segundo municÃ­pio (apenas se comparaÃ§Ã£o)
-if modo_analise == "ComparaÃ§Ã£o":
+# Segundo município (apenas se comparação)
+if modo_analise == "Comparação":
     municipio_2 = st.sidebar.selectbox(
-        "Selecione o segundo municÃ­pio:",
+        "Selecione o segundo município:",
         municipios
     )
 else:
     municipio_2 = None
 
 # =========================
-# TÃTULO
+# TÍTULO
 # =========================
 
-st.title("Ãndice de Risco ClimÃ¡tico Industrial de Santa Catarina")
+st.title("Indice de Risco Climático Industrial de Santa Catarina")
 
 # =========================
-# FUNÃ‡ÃƒO PARA ANÃLISE
+# FUNÇÃO PARA ANÁLISE
 # =========================
 
 def gerar_texto_insight(df, df_mun):
 
     # =========================
-    # VARIÃVEIS BASE
+    # VARIÁVEIS BASE
     # =========================
     risk = df_mun["risk_norm"].values[0]
     hazard = df_mun["hazard_index"].values[0]
@@ -530,7 +552,7 @@ def gerar_texto_insight(df, df_mun):
     vulnerability = df_mun["vulnerability_index"].values[0]
 
     # =========================
-    # CLASSIFICAÃ‡ÃƒO RELATIVA (QUANTIL)
+    # CLASSIFICAÇÃO RELATIVA (QUANTIL)
     # =========================
     p33 = df["risk_norm"].quantile(0.33)
     p66 = df["risk_norm"].quantile(0.66)
@@ -542,15 +564,15 @@ def gerar_texto_insight(df, df_mun):
     else:
         nivel = "baixo"
 
-    # posiÃ§Ã£o no estado
+    # posição no estado
     posicao = (df["risk_norm"] < risk).mean()
 
     if posicao > 0.66:
-        pos_text = "entre os municÃ­pios de maior risco no estado"
+        pos_text = "entre os municípios de maior risco no estado"
     elif posicao > 0.33:
-        pos_text = "em posiÃ§Ã£o intermediÃ¡ria no estado"
+        pos_text = "em posição intermediária no estado"
     else:
-        pos_text = "entre os municÃ­pios de menor risco no estado"
+        pos_text = "entre os municípios de menor risco no estado"
 
     # =========================
     # DRIVERS
@@ -565,33 +587,33 @@ def gerar_texto_insight(df, df_mun):
     min_driver = min(drivers, key=drivers.get)
 
     # =========================
-    # VARIÃVEL DOMINANTE
+    # VARIÁVEL DOMINANTE
     # =========================
     if main_driver == "Hazard":
         vars_dict = {
-            "dÃ©ficit hÃ­drico": df_mun["def_mean"].values[0],
-            "variabilidade da precipitaÃ§Ã£o": df_mun["ppt_std"].values[0],
-            "variabilidade do vento": df_mun["ws_std"].values[0],
-            "amplitude tÃ©rmica": df_mun["dtr_mean"].values[0]
+            "déficit hídrico": df_mun["def_mean_norm"].values[0],
+            "variabilidade da precipitação": df_mun["ppt_std_norm"].values[0],
+            "variabilidade do vento": df_mun["ws_std_norm"].values[0],
+            "amplitude térmica": df_mun["dtr_mean_norm"].values[0]
         }
 
     elif main_driver == "Exposure":
         vars_dict = {
-            "empregos industriais per capita": df_mun["empregos_pc"].values[0],
-            "empresas industriais per capita": df_mun["empresas_pc"].values[0]
+            "empregos industriais per capita": df_mun["empregos_pc_norm"].values[0],
+            "empresas industriais per capita": df_mun["empresas_pc_norm"].values[0]
         }
 
     else:
         vars_dict = {
-            "intensidade energÃ©tica": df_mun["energia_pc_norm"].values[0],
-            "sensibilidade da produÃ§Ã£o agrÃ­cola": df_mun["agro_pc_norm"].values[0],
-            "resiliÃªncia da renda": df_mun["pib_pc_inv"].values[0]
+            "intensidade energética": df_mun["energia_pc_norm"].values[0],
+            "sensibilidade da produção agrícola": df_mun["agro_pc_norm"].values[0],
+            "resiliência da renda": df_mun["pib_pc_inv"].values[0]
         }
 
     main_variable = max(vars_dict, key=vars_dict.get)
 
     # =========================
-    # LÃ“GICA DE POLÃTICA (AJUSTE EXPOSURE)
+    # LÓGICA DE POLÍTICA (AJUSTE EXPOSURE)
     # =========================
     if main_driver == "Exposure":
 
@@ -599,45 +621,45 @@ def gerar_texto_insight(df, df_mun):
         drivers_sorted = sorted(drivers.items(), key=lambda x: x[1], reverse=True)
         second_driver = drivers_sorted[1][0]
 
-        # variÃ¡vel dominante do segundo driver
+        # variável dominante do segundo driver
         if second_driver == "Hazard":
             second_vars = {
-                "dÃ©ficit hÃ­drico": df_mun["def_mean"].values[0],
-                "variabilidade da precipitaÃ§Ã£o": df_mun["ppt_std"].values[0],
-                "variabilidade do vento": df_mun["ws_std"].values[0],
-                "amplitude tÃ©rmica": df_mun["dtr_mean"].values[0]
+                "déficit hídrico": df_mun["def_mean_norm"].values[0],
+                "variabilidade da precipitação": df_mun["ppt_std_norm"].values[0],
+                "variabilidade do vento": df_mun["ws_std_norm"].values[0],
+                "amplitude térmica": df_mun["dtr_mean_norm"].values[0]
             }
         else:
             second_vars = {
-                "intensidade energÃ©tica": df_mun["energia_pc_norm"].values[0],
-                "sensibilidade da produÃ§Ã£o agrÃ­cola": df_mun["agro_pc_norm"].values[0],
-                "resiliÃªncia da renda": df_mun["pib_pc_inv"].values[0]
+                "intensidade energética": df_mun["energia_pc_norm"].values[0],
+                "sensibilidade da produção agrícola": df_mun["agro_pc_norm"].values[0],
+                "resiliência da renda": df_mun["pib_pc_inv"].values[0]
             }
 
         second_variable = max(second_vars, key=second_vars.get)
 
         politica_texto = f"""
-Do ponto de vista econÃ´mico, o risco reflete principalmente o volume de atividade exposta. 
-Nesse contexto, polÃ­ticas devem atuar sobre **{second_driver.lower()}**, 
-especialmente em **{second_variable}**, reduzindo a sensibilidade a choques climÃ¡ticos.
+Do ponto de vista econômico, o risco reflete principalmente o volume de atividade exposta. 
+Nesse contexto, políticas devem atuar sobre **{second_driver.lower()}**, 
+especialmente em **{second_variable}**, reduzindo a sensibilidade a choques climáticos.
 """
 
     else:
 
         politica_texto = f"""
-Do ponto de vista econÃ´mico, isso sugere que intervenÃ§Ãµes direcionadas a **{main_driver.lower()}**, 
-especialmente sobre **{main_variable}**, tendem a gerar maior efetividade na mitigaÃ§Ã£o do risco climÃ¡tico industrial.
+Do ponto de vista econômico, isso sugere que intervenções direcionadas a **{main_driver.lower()}**, 
+especialmente sobre **{main_variable}**, tendem a gerar maior efetividade na mitigação do risco climático industrial.
 """
 
     # =========================
-    # ANULAÃ‡ÃƒO
+    # ANULAÇÃO
     # =========================
     if drivers[min_driver] < 0.1:
         anulacao_texto = f"""
-Observa-se que a dimensÃ£o **{min_driver}** apresenta valor muito reduzido, 
-atuando como fator limitante do risco agregado. Na formulaÃ§Ã£o multiplicativa 
-do Ã­ndice, essa baixa intensidade contribui para **atenuar o risco total**, 
-mesmo na presenÃ§a de valores mais elevados nas demais dimensÃµes.
+Observa-se que a dimensão **{min_driver}** apresenta valor muito reduzido, 
+atuando como fator limitante do risco agregado. Na formulação multiplicativa 
+do índice, essa baixa intensidade contribui para **atenuar o risco total**, 
+mesmo na presença de valores mais elevados nas demais dimensões.
 """
     else:
         anulacao_texto = ""
@@ -646,11 +668,11 @@ mesmo na presenÃ§a de valores mais elevados nas demais dimensÃµes.
     # TEXTO FINAL
     # =========================
     texto = f"""
-O municÃ­pio apresenta um nÃ­vel **{nivel} de risco climÃ¡tico industrial** 
-(Ã­ndice = {risk:.2f}), situando-se {pos_text}.
+O município apresenta um nível **{nivel} de risco climático industrial** 
+(índice = {risk:.2f}), situando-se {pos_text}.
 
-A decomposiÃ§Ã£o do Ã­ndice indica que o principal fator de risco Ã© **{main_driver}**, 
-com destaque para **{main_variable}** como principal componente explicativo dentro dessa dimensÃ£o.
+A decomposição do índice indica que o principal fator de risco é **{main_driver}**, 
+com destaque para **{main_variable}** como principal componente explicativo dentro dessa dimensão.
 
 {politica_texto}
 
@@ -682,12 +704,12 @@ with tab0:
     # ========================
     with col1:
 
-        # ORDENAÃ‡ÃƒO
+        # ORDENAÇÃO
         top10 = ranking.sort_values("risk_norm", ascending=False).head(10)
         bottom10 = ranking.sort_values("risk_norm", ascending=True).head(10)
 
         # MAIOR RISCO
-        st.markdown("**MunicÃ­pios de Maior Risco**")
+        st.markdown("**Municípios de Maior Risco**")
 
         fig_top = px.bar(
             top10.sort_values("risk_norm", ascending=True),  
@@ -696,7 +718,7 @@ with tab0:
             orientation="h",
             color="risk_norm",
             color_continuous_scale="OrRd", 
-            labels={"risk_norm": "Ãndice de Risco ClimÃ¡tico"}
+            labels={"risk_norm": "Índice de Risco Climático"}
         )
 
         fig_top.update_layout(
@@ -719,7 +741,7 @@ with tab0:
         st.plotly_chart(fig_top, use_container_width=True)
         st.markdown("---")
         # MENOR RISCO
-        st.markdown("**MunicÃ­pios de Menor Risco**")
+        st.markdown("**Municípios de Menor Risco**")
 
         fig_bot = px.bar(
             bottom10.sort_values("risk_norm", ascending=True),
@@ -728,7 +750,7 @@ with tab0:
             orientation="h",
             color="risk_norm",
             color_continuous_scale="Blues", 
-            labels={"risk_norm": "Ãndice de Risco ClimÃ¡tico"}
+            labels={"risk_norm": "Índice de Risco Climático"}
         )
 
         fig_bot.update_layout(
@@ -755,7 +777,7 @@ with tab0:
     # COL2: MAP + TEXT
     # ========================
     with col2:
-        st.markdown("**DistribuiÃ§Ã£o GeogrÃ¡fica**")
+        st.markdown("**Distribuição Geográfica**")
         container = st.container(border=False)
         with container:
             fig = px.choropleth(
@@ -765,7 +787,7 @@ with tab0:
                 color="risk_norm",
                 color_continuous_scale="Reds",
                 hover_name="municipio",
-                labels={"risk_norm": "Ãndice de Risco ClimÃ¡tico"},
+                labels={"risk_norm": "Índice de Risco Climático"},
             
             )
 
@@ -776,7 +798,7 @@ with tab0:
             )
 
             fig.update_traces(
-                hovertemplate="<b>%{hovertext}</b><br>Ãndice de Risco ClimÃ¡tico: %{z:.3f}<extra></extra>"
+                hovertemplate="<b>%{hovertext}</b><br>Índice de Risco Climático: %{z:.3f}<extra></extra>"
             )
 
             fig.update_layout(
@@ -789,7 +811,7 @@ with tab0:
                     x=0.5,
                     y=-0.15,
                     len=1,
-                    title=dict(text="Ãndice de Risco ClimÃ¡tico", font=dict(color="white", size=12)),
+                    title=dict(text="Índice de Risco Climático", font=dict(color="white", size=12)),
                     tickfont=dict(color="white", size=11)
                 )
             )
@@ -808,11 +830,11 @@ with tab0:
             font-size:15px;
             line-height:1.5;
         ">
-        <b>InterpretaÃ§Ã£o dos Dados</b><br><br>
-        MunicÃ­pios de maior risco combinam nÃ­veis elevados de hazard climÃ¡tico, alta exposiÃ§Ã£o da atividade industrial e maior vulnerabilidade.
+        <b>Interpretação dos Dados</b><br><br>
+        Municípios de maior risco combinam níveis elevados de hazard climático, alta exposição da atividade industrial e maior vulnerabilidade.
         
-        JÃ¡ municÃ­pios de menor risco apresentam menor suscetibilidade a impactos climÃ¡ticos, seja por menor exposiÃ§Ã£o, melhores condiÃ§Ãµes estruturais ou menor intensidade de eventos climÃ¡ticos. 
-        Como o Ã­ndice de risco Ã© construÃ­do de forma multiplicativa, valores prÃ³ximos de zero em qualquer uma das dimensÃµes reduzem significativamente o risco total.
+        Já municípios de menor risco apresentam menor suscetibilidade a impactos climáticos, seja por menor exposição, melhores condições estruturais ou menor intensidade de eventos climáticos. 
+        Como o índice de risco é construído de forma multiplicativa, valores próximos de zero em qualquer uma das dimensões reduzem significativamente o risco total.
         </div>
         """, unsafe_allow_html=True)
 
@@ -822,20 +844,20 @@ with tab0:
     # SECTION 2: DETAILED ANALYSIS
     # =========================
 
-    st.subheader("AnÃ¡lise Detalhada por MunicÃ­pio")
+    st.subheader("Análise Detalhada por Município")
 
-    # CASO 1 â€” TODOS
+    # CASO 1 — TODOS
     if municipio_selecionado == "Todos" and modo_analise == "Individual":
         st.markdown(
-            '<p style="color:#9ca3af; font-size:13px; font-style:italic;">Selecione um municÃ­pio na barra lateral para visualizar a anÃ¡lise detalhada.</p>',
+            '<p style="color:#9ca3af; font-size:13px; font-style:italic;">Selecione um município na barra lateral para visualizar a análise detalhada.</p>',
             unsafe_allow_html=True
         )
 
-    # CASO 3 â€” COMPARAÃ‡ÃƒO
-    elif modo_analise == "ComparaÃ§Ã£o":
+    # CASO 3 — COMPARAÇÃO
+    elif modo_analise == "Comparação":
 
         if municipio_selecionado == municipio_2:
-            st.warning("Selecione dois municÃ­pios diferentes para comparaÃ§Ã£o.")
+            st.warning("Selecione dois municípios diferentes para comparação.")
         
         else:
             df_mun1 = df[df["municipio_nome"] == municipio_selecionado]
@@ -843,7 +865,7 @@ with tab0:
 
             colA, colB = st.columns(2)
 
-            # FUNÃ‡ÃƒO REUTILIZÃVEL
+            # FUNÇÃO REUTILIZÁVEL
             def render_municipio(df_mun, nome, show_tables=True, show_charts=True):
 
                 risk = df_mun["risk_norm"].values[0]
@@ -851,7 +873,7 @@ with tab0:
                 exposure = df_mun["exposure_index"].values[0]
                 vulnerability = df_mun["vulnerability_index"].values[0]
 
-                # ðŸ”¹ garantir normalizaÃ§Ã£o para o ranking
+                # 🔹 garantir normalização para o ranking
                 ranking_temp = ranking.copy()
                 ranking_temp["municipio"] = ranking_temp["municipio"].apply(normalize_text)
                 ranking_sorted_temp = ranking_temp.sort_values("risk_norm", ascending=False).reset_index(drop=True)
@@ -865,7 +887,7 @@ with tab0:
                 
                 posicao_temp = int(pos_row_temp.values[0]) if not pos_row_temp.empty else "-"
                 total_municipios_temp = len(ranking_sorted_temp)
-                ranking_display_temp = f"{posicao_temp}Âº / {total_municipios_temp}<br><span style='font-size:11px;'>(Maior risco = 1Â°)</span>" if posicao_temp != "-" else "-"
+                ranking_display_temp = f"{posicao_temp}º / {total_municipios_temp}<br><span style='font-size:11px;'>(Maior risco = 1°)</span>" if posicao_temp != "-" else "-"
 
                 st.markdown(f"""
                 <div class="mun-header-section">
@@ -890,7 +912,7 @@ with tab0:
 
                 if show_tables:
                     st.markdown(
-                    '<p style="color:white; font-size:18px; font-weight: 500; ">DecomposiÃ§Ã£o dos SubÃ­ndices</p>',
+                    '<p style="color:white; font-size:18px; font-weight: 500; ">Decomposição dos Subíndices</p>',
                     unsafe_allow_html=True
                     )
 
@@ -900,17 +922,17 @@ with tab0:
                         st.markdown("**Hazard**")
 
                         hazard_df = pd.DataFrame({
-                            "VariÃ¡veis": [
-                                "DÃ©ficit HÃ­drico",
-                                "Variabilidade da PrecipitaÃ§Ã£o",
+                            "Variáveis": [
+                                "Déficit Hídrico",
+                                "Variabilidade da Precipitação",
                                 "Variabilidade do Vento",
-                                "Amplitude TÃ©rmica"
+                                "Amplitude Térmica"
                                 ],
                             "Valor": [
-                                df_mun["def_mean"].values[0],
-                                df_mun["ppt_std"].values[0],
-                                df_mun["ws_std"].values[0],
-                                df_mun["dtr_mean"].values[0]
+                                df_mun["def_mean_norm"].values[0],
+                                df_mun["ppt_std_norm"].values[0],
+                                df_mun["ws_std_norm"].values[0],
+                                df_mun["dtr_mean_norm"].values[0]
                                 ]
                         })
 
@@ -920,13 +942,13 @@ with tab0:
                         st.markdown("**Exposure**")
 
                         exposure_df = pd.DataFrame({
-                            "VariÃ¡veis": [
+                            "Variáveis": [
                                 "Empregos Industriais per capita",
                                 "Empresas Industriais per capita"
                                 ],
                             "Valor": [
-                                df_mun["empregos_pc"].values[0],
-                                df_mun["empresas_pc"].values[0]
+                                df_mun["empregos_pc_norm"].values[0],
+                                df_mun["empresas_pc_norm"].values[0]
                                 ]
                         })
 
@@ -936,10 +958,10 @@ with tab0:
                         st.markdown("**Vulnerability**")
 
                         vuln_df = pd.DataFrame({
-                            "VariÃ¡veis": [
-                                "Intensidade EnergÃ©tica",
-                                "Sensibilidade da ProduÃ§Ã£o AgrÃ­cola",
-                                "ResiliÃªncia da Renda"
+                            "Variáveis": [
+                                "Intensidade Energética",
+                                "Sensibilidade da Produção Agrícola",
+                                "Resiliência da Renda"
                             ],
                             "Valor": [
                                 df_mun["energia_pc_norm"].values[0],
@@ -959,7 +981,7 @@ with tab0:
                         fill='toself',
                         fillcolor='rgba(251,146,60,0.4)',
                         line=dict(color='#fb923c'),
-                        name="MunicÃ­pio",
+                        name="Município",
                         hovertemplate='<b>%{theta}</b><br>%{r:.2f}<extra></extra>'
                     ))
 
@@ -974,7 +996,7 @@ with tab0:
                                 fill='toself',
                                 fillcolor='rgba(56,189,248,0.2)',
                                 line=dict(color='#38bdf8'),
-                                name=f"MÃ©dia da MesoregiÃ£o: {meso.title()}",
+                                name=f"Média da Mesoregião: {meso.title()}",
                                 hovertemplate='<b>%{theta}</b><br>%{r:.2f}<extra></extra>'
                             ))
 
@@ -1026,9 +1048,9 @@ with tab0:
             with colB:
                 hazard2, exposure2, vulnerability2 = render_municipio(df_mun2, municipio_2, show_tables=False, show_charts=False)
 
-            # Exibe tÃ­tulo e tabelas lado a lado
+            # Exibe título e tabelas lado a lado
             st.markdown(
-                '<p style="color:white; font-size:18px; font-weight: 500; ">DecomposiÃ§Ã£o dos SubÃ­ndices</p>',
+                '<p style="color:white; font-size:18px; font-weight: 500; ">Decomposição dos Subíndices</p>',
                 unsafe_allow_html=True
             )
 
@@ -1038,17 +1060,17 @@ with tab0:
             with sub1:
                 st.markdown("**Hazard**")
                 hazard_df = pd.DataFrame({
-                    "VariÃ¡veis": [
-                        "DÃ©ficit HÃ­drico",
-                        "Variabilidade da PrecipitaÃ§Ã£o",
+                    "Variáveis": [
+                        "Déficit Hídrico",
+                        "Variabilidade da Precipitação",
                         "Variabilidade do Vento",
-                        "Amplitude TÃ©rmica"
+                        "Amplitude Térmica"
                     ],
                     "Valor": [
-                        df_mun1["def_mean"].values[0],
-                        df_mun1["ppt_std"].values[0],
-                        df_mun1["ws_std"].values[0],
-                        df_mun1["dtr_mean"].values[0]
+                        df_mun1["def_mean_norm"].values[0],
+                        df_mun1["ppt_std_norm"].values[0],
+                        df_mun1["ws_std_norm"].values[0],
+                        df_mun1["dtr_mean_norm"].values[0]
                     ]
                 })
                 st.markdown(styled_table(hazard_df, font_size="12px"), unsafe_allow_html=True)
@@ -1056,13 +1078,13 @@ with tab0:
             with sub2:
                 st.markdown("**Exposure**")
                 exposure_df = pd.DataFrame({
-                    "VariÃ¡veis": [
+                    "Variáveis": [
                         "Empregos Industriais per capita",
                         "Empresas Industriais per capita"
                     ],
                     "Valor": [
-                        df_mun1["empregos_pc"].values[0],
-                        df_mun1["empresas_pc"].values[0]
+                        df_mun1["empregos_pc_norm"].values[0],
+                        df_mun1["empresas_pc_norm"].values[0]
                     ]
                 })
                 st.markdown(styled_table(exposure_df, font_size="12px"), unsafe_allow_html=True)
@@ -1070,10 +1092,10 @@ with tab0:
             with sub3:
                 st.markdown("**Vulnerability**")
                 vuln_df = pd.DataFrame({
-                    "VariÃ¡veis": [
-                        "Intensidade EnergÃ©tica",
-                        "Sensibilidade da ProduÃ§Ã£o AgrÃ­cola",
-                        "ResiliÃªncia da Renda"
+                    "Variáveis": [
+                        "Intensidade Energética",
+                        "Sensibilidade da Produção Agrícola",
+                        "Resiliência da Renda"
                     ],
                     "Valor": [
                         df_mun1["energia_pc_norm"].values[0],
@@ -1087,17 +1109,17 @@ with tab0:
             with sub4:
                 st.markdown("**Hazard**")
                 hazard_df = pd.DataFrame({
-                    "VariÃ¡veis": [
-                        "DÃ©ficit HÃ­drico",
-                        "Variabilidade da PrecipitaÃ§Ã£o",
+                    "Variáveis": [
+                        "Déficit Hídrico",
+                        "Variabilidade da Precipitação",
                         "Variabilidade do Vento",
-                        "Amplitude TÃ©rmica"
+                        "Amplitude Térmica"
                     ],
                     "Valor": [
-                        df_mun2["def_mean"].values[0],
-                        df_mun2["ppt_std"].values[0],
-                        df_mun2["ws_std"].values[0],
-                        df_mun2["dtr_mean"].values[0]
+                        df_mun2["def_mean_norm"].values[0],
+                        df_mun2["ppt_std_norm"].values[0],
+                        df_mun2["ws_std_norm"].values[0],
+                        df_mun2["dtr_mean_norm"].values[0]
                     ]
                 })
                 st.markdown(styled_table(hazard_df, font_size="12px"), unsafe_allow_html=True)
@@ -1105,13 +1127,13 @@ with tab0:
             with sub5:
                 st.markdown("**Exposure**")
                 exposure_df = pd.DataFrame({
-                    "VariÃ¡veis": [
+                    "Variáveis": [
                         "Empregos Industriais per capita",
                         "Empresas Industriais per capita"
                     ],
                     "Valor": [
-                        df_mun2["empregos_pc"].values[0],
-                        df_mun2["empresas_pc"].values[0]
+                        df_mun2["empregos_pc_norm"].values[0],
+                        df_mun2["empresas_pc_norm"].values[0]
                     ]
                 })
                 st.markdown(styled_table(exposure_df, font_size="12px"), unsafe_allow_html=True)
@@ -1119,10 +1141,10 @@ with tab0:
             with sub6:
                 st.markdown("**Vulnerability**")
                 vuln_df = pd.DataFrame({
-                    "VariÃ¡veis": [
-                        "Intensidade EnergÃ©tica",
-                        "Sensibilidade da ProduÃ§Ã£o AgrÃ­cola",
-                        "ResiliÃªncia da Renda"
+                    "Variáveis": [
+                        "Intensidade Energética",
+                        "Sensibilidade da Produção Agrícola",
+                        "Resiliência da Renda"
                     ],
                     "Valor": [
                         df_mun2["energia_pc_norm"].values[0],
@@ -1132,7 +1154,7 @@ with tab0:
                 })
                 st.markdown(styled_table(vuln_df, font_size="12px"), unsafe_allow_html=True)
 
-            # Exibe grÃ¡ficos lado a lado
+            # Exibe gráficos lado a lado
             chart_col1, chart_col2 = st.columns(2)
 
             with chart_col1:
@@ -1143,7 +1165,7 @@ with tab0:
                     fill='toself',
                     fillcolor='rgba(251,146,60,0.4)',
                     line=dict(color='#fb923c'),
-                    name="MunicÃ­pio",
+                    name="Município",
                     hovertemplate='<b>%{theta}</b><br>%{r:.2f}<extra></extra>'
                 ))
                 
@@ -1158,7 +1180,7 @@ with tab0:
                             fill='toself',
                             fillcolor='rgba(56,189,248,0.2)',
                             line=dict(color='#38bdf8'),
-                            name=f"MÃ©dia da MesoregiÃ£o",
+                            name=f"Média da Mesoregião",
                             hovertemplate='<b>%{theta}</b><br>%{r:.2f}<extra></extra>'
                         ))
                 
@@ -1207,7 +1229,7 @@ with tab0:
                     fill='toself',
                     fillcolor='rgba(251,146,60,0.4)',
                     line=dict(color='#fb923c'),
-                    name="MunicÃ­pio",
+                    name="Município",
                     hovertemplate='<b>%{theta}</b><br>%{r:.2f}<extra></extra>'
                 ))
                 
@@ -1222,7 +1244,7 @@ with tab0:
                             fill='toself',
                             fillcolor='rgba(56,189,248,0.2)',
                             line=dict(color='#38bdf8'),
-                            name=f"MÃ©dia da MesoregiÃ£o",
+                            name=f"Média da Mesoregião",
                             hovertemplate='<b>%{theta}</b><br>%{r:.2f}<extra></extra>'
                         ))
                 
@@ -1263,7 +1285,7 @@ with tab0:
                 
                 """, unsafe_allow_html=True)
 
-    # CASO 2 â€” INDIVIDUAL
+    # CASO 2 — INDIVIDUAL
      
     else:
 
@@ -1271,7 +1293,7 @@ with tab0:
 
         if not df_mun.empty:
 
-            # ðŸ”¹ garantir normalizaÃ§Ã£o
+            # 🔹 garantir normalização
             ranking["municipio"] = ranking["municipio"].apply(normalize_text)
 
             ranking_sorted = ranking.sort_values("risk_norm", ascending=False).reset_index(drop=True)
@@ -1290,7 +1312,7 @@ with tab0:
             municipio = municipio_selecionado
             risk = round(df_mun["risk_norm"].values[0], 3)
             
-            ranking_display = f"{posicao}Âº / {total_municipios}<br><span style='font-size:11px;'>(Maior risco = 1Â°)</span>" if posicao != "-" else "-"
+            ranking_display = f"{posicao}º / {total_municipios}<br><span style='font-size:11px;'>(Maior risco = 1°)</span>" if posicao != "-" else "-"
 
             st.markdown(f"""
             
@@ -1320,7 +1342,7 @@ with tab0:
             col3.metric("Vulnerability", round(vulnerability,3))
 
             st.markdown(
-            '<p style="color:white; font-size:18px; font-weight: 500; ">DecomposiÃ§Ã£o dos SubÃ­ndices</p>',
+            '<p style="color:white; font-size:18px; font-weight: 500; ">Decomposição dos Subíndices</p>',
             unsafe_allow_html=True
             )
 
@@ -1330,17 +1352,17 @@ with tab0:
                 st.markdown("**Hazard**")
 
                 hazard_df = pd.DataFrame({
-                    "VariÃ¡veis": [
-                        "DÃ©ficit HÃ­drico",
-                        "Variabilidade da PrecipitaÃ§Ã£o",
+                    "Variáveis": [
+                        "Déficit Hídrico",
+                        "Variabilidade da Precipitação",
                         "Variabilidade do Vento",
-                        "Amplitude TÃ©rmica"
+                        "Amplitude Térmica"
                         ],
                     "Valor": [
-                        df_mun["def_mean"].values[0],
-                        df_mun["ppt_std"].values[0],
-                        df_mun["ws_std"].values[0],
-                        df_mun["dtr_mean"].values[0]
+                        df_mun["def_mean_norm"].values[0],
+                        df_mun["ppt_std_norm"].values[0],
+                        df_mun["ws_std_norm"].values[0],
+                        df_mun["dtr_mean_norm"].values[0]
                         ]
                 })
 
@@ -1350,13 +1372,13 @@ with tab0:
                 st.markdown("**Exposure**")
 
                 exposure_df = pd.DataFrame({
-                    "VariÃ¡veis": [
+                    "Variáveis": [
                         "Empregos Industriais per capita",
                         "Empresas Industriais per capita"
                         ],
                     "Valor": [
-                        df_mun["empregos_pc"].values[0],
-                        df_mun["empresas_pc"].values[0]
+                        df_mun["empregos_pc_norm"].values[0],
+                        df_mun["empresas_pc_norm"].values[0]
                         ]
                 })
 
@@ -1366,10 +1388,10 @@ with tab0:
                 st.markdown("**Vulnerability**")
 
                 vuln_df = pd.DataFrame({
-                    "VariÃ¡veis": [
-                        "Intensidade EnergÃ©tica",
-                        "Sensibilidade da ProduÃ§Ã£o AgrÃ­cola",
-                        "ResiliÃªncia da Renda"
+                    "Variáveis": [
+                        "Intensidade Energética",
+                        "Sensibilidade da Produção Agrícola",
+                        "Resiliência da Renda"
                     ],
                     "Valor": [
                         df_mun["energia_pc_norm"].values[0],
@@ -1392,7 +1414,7 @@ with tab0:
                     fill='toself',
                     fillcolor='rgba(251,146,60,0.4)',
                     line=dict(color='#fb923c'),
-                    name="MunicÃ­pio",
+                    name="Município",
                     hovertemplate='<b>%{theta}</b><br>%{r:.2f}<extra></extra>'
                 ))
 
@@ -1407,7 +1429,7 @@ with tab0:
                             fill='toself',
                             fillcolor='rgba(56,189,248,0.2)',
                             line=dict(color='#38bdf8'),
-                            name=f"MÃ©dia da MesoregiÃ£o: {meso.title()}",
+                            name=f"Média da Mesoregião: {meso.title()}",
                             hovertemplate='<b>%{theta}</b><br>%{r:.2f}<extra></extra>'
                         ))
 
@@ -1467,8 +1489,8 @@ with tab1:
 
 with tab2:
 
-    # DISTRIBUIÃ‡ÃƒO DO RISCO
-    st.markdown("**DistribuiÃ§Ã£o do Risco ClimÃ¡tico**")
+    # DISTRIBUIÇÃO DO RISCO
+    st.markdown("**Distribuição do Risco Climático**")
     col_chart, col_text = st.columns([1.2, 1])
 
     with col_chart:
@@ -1482,8 +1504,8 @@ with tab2:
 
         fig_dist.update_traces(
             hovertemplate=
-            "Ãndice de Risco ClimÃ¡tico (faixa): %{x}<br>" +
-            "MunicÃ­pios: %{y}<extra></extra>"
+            "Índice de Risco Climático (faixa): %{x}<br>" +
+            "Municípios: %{y}<extra></extra>"
         )
 
         fig_dist.update_layout(
@@ -1493,12 +1515,12 @@ with tab2:
             margin=dict(l=0, r=0, t=0, b=0),
             font=dict(color="white"),
             xaxis=dict(
-                title="Ãndice de Risco ClimÃ¡tico",
+                title="Índice de Risco Climático",
                 title_font=dict(color="white"),
                 tickfont=dict(color="white")
             ),
             yaxis=dict(
-                title="NÃºmero de MunicÃ­pios",
+                title="Número de Municípios",
                 title_font=dict(color="white"),
                 tickfont=dict(color="white")
             )
@@ -1506,31 +1528,31 @@ with tab2:
 
         st.plotly_chart(fig_dist, use_container_width=True)
 
-        # MÃ‰TRICAS ESTATÃSTICAS
+        # MÉTRICAS ESTATÍSTICAS
         col1, col2, col3 = st.columns(3)
 
-        col1.metric("MÃ©dia", round(df["risk_norm"].mean(), 3))
-        col2.metric("Desvio PadrÃ£o", round(df["risk_norm"].std(), 3))
+        col1.metric("Média", round(df["risk_norm"].mean(), 3))
+        col2.metric("Desvio Padrão", round(df["risk_norm"].std(), 3))
         col3.metric("Assimetria", round(df["risk_norm"].skew(), 3))
 
-        # INTERPRETAÃ‡ÃƒO
+        # INTERPRETAÇÃO
         mean = df["risk_norm"].mean()
         std = df["risk_norm"].std()
         skew = df["risk_norm"].skew()
     
-        # interpretaÃ§Ã£o da assimetria
+        # interpretação da assimetria
         if skew > 0.5:
-            skew_text = "assimetria positiva, indicando concentraÃ§Ã£o de municÃ­pios em nÃ­veis mais baixos de risco, com poucos municÃ­pios apresentando valores elevados"
+            skew_text = "assimetria positiva, indicando concentração de municípios em níveis mais baixos de risco, com poucos municípios apresentando valores elevados"
         elif skew < -0.5:
-            skew_text = "assimetria negativa, sugerindo concentraÃ§Ã£o em nÃ­veis mais altos de risco"
+            skew_text = "assimetria negativa, sugerindo concentração em níveis mais altos de risco"
         else:
-            skew_text = "distribuiÃ§Ã£o aproximadamente simÃ©trica"
+            skew_text = "distribuição aproximadamente simétrica"
 
-        # interpretaÃ§Ã£o da dispersÃ£o
+        # interpretação da dispersão
         if std > 0.15:
-            disp_text = "elevada heterogeneidade entre os municÃ­pios"
+            disp_text = "elevada heterogeneidade entre os municípios"
         else:
-            disp_text = "baixa dispersÃ£o, indicando relativa homogeneidade entre os municÃ­pios"
+            disp_text = "baixa dispersão, indicando relativa homogeneidade entre os municípios"
     
     with col_text:
         st.markdown(f"""
@@ -1545,18 +1567,18 @@ with tab2:
             line-height:1.5;
         "> 
                              
-        A distribuiÃ§Ã£o do risco climÃ¡tico industrial em Santa Catarina apresenta <b>{skew_text}</b>, 
+        A distribuição do risco climático industrial em Santa Catarina apresenta <b>{skew_text}</b>, 
 
-        Observa-se tambÃ©m <b>{disp_text}</b>
+        Observa-se também <b>{disp_text}</b>
 
-        Esse padrÃ£o indica que o risco climÃ¡tico industrial tende a se concentrar em um conjunto restrito de municÃ­pios, enquanto a maior parte apresenta nÃ­veis reduzidos de risco relativo.
+        Esse padrão indica que o risco climático industrial tende a se concentrar em um conjunto restrito de municípios, enquanto a maior parte apresenta níveis reduzidos de risco relativo.
         
         """, unsafe_allow_html=True)
     
     # MISMATCH INDEX
     st.markdown("**Estrutura do Risco (Mismatch)**")
 
-    # CÃ¡lculo do mismatch
+    # Cálculo do mismatch
     df["mismatch_std"] = df[[
         "hazard_index",
         "exposure_index",
@@ -1583,7 +1605,7 @@ with tab2:
         fig_mismatch.update_traces(
             hovertemplate=
             "Desbalanceamento (faixa): %{x}<br>" +
-            "MunicÃ­pios: %{y}<extra></extra>",
+            "Municípios: %{y}<extra></extra>",
             marker=dict(color="#60a5fa")
         )
 
@@ -1599,7 +1621,7 @@ with tab2:
                 tickfont=dict(color="white")
             ),
             yaxis=dict(
-                title="NÃºmero de MunicÃ­pios",
+                title="Número de Municípios",
                 title_font=dict(color="white"),
                 tickfont=dict(color="white")
             )
@@ -1608,7 +1630,7 @@ with tab2:
         st.plotly_chart(fig_mismatch, use_container_width=True)
         
         st.metric(
-            "% MunicÃ­pios com Alto Mismatch",
+            "% Municípios com Alto Mismatch",
             f"{high_mismatch_share*100:.1f}%"
         )
 
@@ -1628,11 +1650,11 @@ with tab2:
 
         O indicador de mismatch captura o desbalanceamento entre hazard, exposure e vulnerability.
 
-        Cerca de <b>{high_mismatch_share*100:.1f}%</b> dos municÃ­pios apresentam forte desbalanceamento entre essas dimensÃµes, com uma elevada e outra muito reduzida.
+        Cerca de <b>{high_mismatch_share*100:.1f}%</b> dos municípios apresentam forte desbalanceamento entre essas dimensões, com uma elevada e outra muito reduzida.
 
-        Devido Ã  estrutura multiplicativa do Ã­ndice, isso tende a comprimir o risco climÃ¡tico industrial, mesmo na presenÃ§a de pressÃµes relevantes.
+        Devido à estrutura multiplicativa do índice, isso tende a comprimir o risco climático industrial, mesmo na presença de pressões relevantes.
 
-        Isso sugere a existÃªncia de <b>risco climÃ¡tico latente</b>, especialmente em contextos de baixa exposiÃ§Ã£o industrial.
+        Isso sugere a existência de <b>risco climático latente</b>, especialmente em contextos de baixa exposição industrial.
 
         """, unsafe_allow_html=True)
 
@@ -1640,13 +1662,13 @@ with tab2:
     # SECTION 2: ECONOMIC INSIGHTS (Correlations)
     # =========================
 
-    st.markdown("**CorrelaÃ§Ã£o entre SubÃ­ndices**")
+    st.markdown("**Correlação entre Subíndices**")
 
     col1, col2 = st.columns([1.2, 1])
 
     with col1:
 
-        # CORRELAÃ‡ÃƒO â€” SUBÃNDICES
+        # CORRELAÇÃO — SUBÍNDICES
         corr_sub = df[[
             "hazard_index",
             "exposure_index",
@@ -1668,8 +1690,8 @@ with tab2:
         )
         fig_corr.update_traces(
             hovertemplate=
-            "%{y} Ã— %{x}<br>" +
-            "CorrelaÃ§Ã£o: %{z:.2f}<extra></extra>"
+            "%{y} × %{x}<br>" +
+            "Correlação: %{z:.2f}<extra></extra>"
         )
 
         fig_corr.update_layout(
@@ -1710,47 +1732,44 @@ with tab2:
             line-height:1.5;
         ">
 
-        A maior correlaÃ§Ã£o positiva ocorre entre <b>{max_pos[0]}</b> e <b>{max_pos[1]}</b> 
-        (correlaÃ§Ã£o = {val_pos:.2f}), indicando que essas dimensÃµes tendem a se elevar conjuntamente entre os municÃ­pios, refletindo possÃ­veis padrÃµes estruturais compartilhados.
+        A relação inversa mais intensa entre <b>{max_neg[0]}</b> e <b>{max_neg[1]}</b> 
+        (correlação = {val_neg:.2f}), sugere que municípios com maior intensidade em uma dessas dimensões 
+        tendem a apresentar níveis mais baixos na outra.
 
-        Por outro lado, observa-se uma relaÃ§Ã£o inversa mais intensa entre <b>{max_neg[0]}</b> e <b>{max_neg[1]}</b> 
-        (correlaÃ§Ã£o = {val_neg:.2f}), sugerindo que municÃ­pios com maior intensidade em uma dessas dimensÃµes 
-        tendem a apresentar nÃ­veis mais baixos na outra.
-
-        Do ponto de vista analÃ­tico, essa relaÃ§Ã£o nÃ£o implica causalidade direta, 
-        mas sugere que esses componentes podem estar associados a caracterÃ­sticas econÃ´micas ou territoriais comuns.
+        Do ponto de vista analítico, essa relação não implica causalidade direta, 
+        mas sugere que esses componentes podem estar associados a características econômicas ou territoriais comuns.
 
 
         </div>
         """, unsafe_allow_html=True)
     
-    st.markdown("**CorrelaÃ§Ã£o entre VariÃ¡veis Estruturais**")
+    st.markdown("**Correlação entre Variáveis Estruturais**")
     col1, col2 = st.columns([1.2, 1], gap="small")
     with col1:
-        # CORRELAÃ‡ÃƒO â€” VARIÃVEIS INTERNAS
+        # CORRELAÇÃO — VARIÁVEIS INTERNAS
 
         vars_cols = [
             # Hazard
-            "def_mean", "ppt_std", "ws_std", "dtr_mean",
+            "def_mean_norm", "ppt_std_norm", "ws_std_norm", "dtr_mean_norm",
             # Exposure
-            "empregos_pc", "empresas_pc",
+            "empregos_pc_norm", "empresas_pc_norm",
             # Vulnerability
             "energia_pc_norm", "agro_pc_norm", "pib_pc_inv"
         ]
 
         corr_vars = df[vars_cols].corr()
 
-        # Labels amigÃ¡veis
+        # Labels amigáveis
         labels_vars = {
-            "def_mean": "DÃ©ficit hÃ­drico",
-            "ppt_std": "Variabilidade da precipitaÃ§Ã£o",
-            "ws_std": "Variabilidade do vento",
-            "dtr_mean": "Amplitude tÃ©rmica",
-            "empregos_pc": "Empregos industriais per capita",
-            "empresas_pc": "Empresas industriais per capita",
-            "energia_pc_norm": "Intensidade energÃ©tica",
-            "agro_pc_norm": "Sensibilidade da produÃ§Ã£o agrÃ­cola",
-            "pib_pc_inv": "ResiliÃªncia da renda"
+            "def_mean_norm": "Déficit hídrico",
+            "ppt_std_norm": "Variabilidade da precipitação",
+            "ws_std_norm": "Variabilidade do vento",
+            "dtr_mean_norm": "Amplitude térmica",
+            "empregos_pc_norm": "Empregos industriais per capita",
+            "empresas_pc_norm": "Empresas industriais per capita",
+            "energia_pc_norm": "Intensidade energética",
+            "agro_pc_norm": "Sensibilidade da produção agrícola",
+            "pib_pc_inv": "Resiliência da renda"
         }
 
         corr_vars = corr_vars.rename(index=labels_vars, columns=labels_vars)
@@ -1758,12 +1777,19 @@ with tab2:
         fig_corr2 = px.imshow(
             corr_vars,
             text_auto=False,
-            aspect="auto"
+            aspect="auto",
+            color_continuous_scale=[
+                (0.0, "#08306b"),
+                (0.5, "#f7f7f7"),
+                (1.0, "#08306b")
+            ],
+            zmin=-1,
+            zmax=1
         )
         fig_corr2.update_traces(
             hovertemplate=
-            "%{y} Ã— %{x}<br>" +
-            "CorrelaÃ§Ã£o: %{z:.2f}<extra></extra>"
+            "%{y} × %{x}<br>" +
+            "Correlação: %{z:.2f}<extra></extra>"
         )
 
         fig_corr2.update_layout(
@@ -1790,13 +1816,13 @@ with tab2:
             )
         )
         fig_corr2.update_xaxes(
-            tickangle=40,   # ou 30 no mÃ¡ximo
+            tickangle=40,   # ou 30 no máximo
             tickfont=dict(size=10)
         )
         st.plotly_chart(fig_corr2, use_container_width=True)
    
     with col2:
-        # INSIGHT AVANÃ‡ADO
+        # INSIGHT AVANÇADO
         st.markdown(f"""
         <div style="
             background-color:#111827;
@@ -1809,19 +1835,19 @@ with tab2:
             line-height:1.5;
         ">
 
-        A estrutura de correlaÃ§Ã£o evidencia como os determinantes do risco interagem entre si.  
+        A estrutura de correlação evidencia como os determinantes do risco interagem entre si.  
 
-        RelaÃ§Ãµes mais fortes sugerem maior associaÃ§Ã£o entre fatores climÃ¡ticos e econÃ´micos, 
-        enquanto correlaÃ§Ãµes mais baixas indicam maior autonomia entre as dimensÃµes.
+        Relações mais fortes sugerem maior associação entre fatores climáticos e econômicos, 
+        enquanto correlações mais baixas indicam maior autonomia entre as dimensões.
 
-        Do ponto de vista analÃ­tico, isso reforÃ§a a necessidade de abordagens multidimensionais 
-        na avaliaÃ§Ã£o do risco climÃ¡tico industrial.
+        Do ponto de vista analítico, isso reforça a necessidade de abordagens multidimensionais 
+        na avaliação do risco climático industrial.
 
         </div>
         """, unsafe_allow_html=True)
 
 # =======================
-# RODAPÃ‰
+# RODAPÉ
 # =======================
 st.markdown("""
 <hr style="margin-top:40px; margin-bottom:10px; border:0.5px solid #374151;">
@@ -1831,7 +1857,8 @@ st.markdown("""
     color:#6b7280;
     font-size:12px;
 ">
-Â©Â© 2026 Climate Risk Index â€” Rebecca Lorandi Silveira Lara. For research and analytical purposes.
+©© 2026 Climate Risk Index — Rebecca Lorandi Silveira Lara. For research and analytical purposes.
 </p>
 """, unsafe_allow_html=True)
+
 
