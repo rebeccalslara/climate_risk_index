@@ -9,7 +9,17 @@
 # =========================
 diretorios/testing/
 diretorios/climate_risk_index/data/raw_data/terraclimate/
+diretorios/climate_risk_index/data/raw_data/RAIS/
+diretorios/climate_risk_index/data/raw_data/SICONFI/
+diretorios/climate_risk_index/data/raw_data/CELESC/
 diretorios/climate_risk_index/data/processed_data/
+diretorios/climate_risk_index/data/data_handling/
+data/raw_data/terraclimate/
+data/raw_data/RAIS/
+data/raw_data/SICONFI/
+data/raw_data/CELESC/
+data/processed_data/
+data/data_handling/
 
 # =========================
 # PYTHON
