@@ -170,6 +170,7 @@ python diretorios/climate_risk_index/script/exposure.py
 python diretorios/climate_risk_index/script/hazard.py
 python diretorios/climate_risk_index/script/vulnerability.py
 python diretorios/climate_risk_index/script/climate_risk_index.py
+python diretorios/climate_risk_index/script/economic_impact.py
 ```
 
 The sub-index scripts save raw and normalized intermediate files in `data/data_handling/`. Final index files used by the dashboard are saved in `output/`.
@@ -207,9 +208,9 @@ diretorios/climate_risk_index/output/dashboard_dataset_2002_2023.csv
 
 It includes the final risk score, sub-indexes, normalized component variables, rankings, and variables used by the dashboard.
 
-## Planned Economic Impact Extension
+## Economic Impact Module
 
-The next project step is an `economic_impact.py` module focused on municipal fiscal expenditure.
+The `economic_impact.py` script estimates the association between climate risk and municipal fiscal expenditure.
 
 The fiscal input file is:
 
@@ -217,12 +218,12 @@ The fiscal input file is:
 diretorios/climate_risk_index/data/raw_data/SICONFI/municipio_despesa.csv
 ```
 
-The planned fiscal filters are:
+Fiscal filters:
 
 - `descricao_conta = Despesas Orcamentarias`
 - `tipo_despesa = Despesas Empenhadas`
 
-Nominal fiscal values will be deflated with:
+Nominal fiscal values are deflated with:
 
 ```text
 diretorios/climate_risk_index/data/raw_data/IPEADATA/IPCA.xls
@@ -234,7 +235,30 @@ using:
 real expense = (nominal expense / IPCA index) x 100
 ```
 
-The planned empirical approach is a panel-data model using the climate risk index time series and municipal expenditure data, with municipality and year fixed effects.
+The current model is:
+
+```text
+log(real_expense_it) =
+    beta0 * risk_norm_it
+  + beta1 * risk_norm_i,t-1
+  + beta2 * risk_norm_i,t-2
+  + municipality fixed effects
+  + year fixed effects
+  + error_it
+```
+
+No control variables are included in the first version. Missing fiscal values are temporally interpolated only when they are internal gaps in an existing municipal time series. Pre-creation years for `BALNEARIO RINCAO` and `PESCARIA BRAVA` remain missing.
+
+Economic impact outputs:
+
+```text
+diretorios/climate_risk_index/data/data_handling/economic_impact_raw_2002_2023.csv
+diretorios/climate_risk_index/data/data_handling/economic_impact_model_data_2002_2023.csv
+diretorios/climate_risk_index/output/economic_impact_results_2002_2023.csv
+diretorios/climate_risk_index/output/economic_impact_municipal_2002_2023.csv
+```
+
+The monetary impact estimates translate a `0.1` increase in `risk_norm` into each municipality's own fiscal scale. Values in reais should not be interpreted as direct cross-municipality rankings, because larger municipalities naturally have larger total budgets.
 
 ## Author
 
