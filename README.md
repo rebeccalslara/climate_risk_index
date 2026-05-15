@@ -56,7 +56,7 @@ The vulnerability index captures structural sensitivity and adaptive capacity:
 - Real GDP per capita, inverted after normalization: `pib_pc_inv`
 - Real agricultural production value per capita: `agro_pc`
 
-Energy consumption is calculated using CELESC industrial consumption only. GDP is deflated with the GDP implicit deflator. Agricultural production is deflated with IGP-DI.
+Energy consumption is calculated using CELESC industrial consumption only. GDP is deflated with the GDP implicit deflator from IPEADATA. Agricultural production is deflated with IGP-DI from IPEADATA.
 
 The vulnerability components used in the final index are:
 
@@ -77,6 +77,26 @@ All sub-indexes are calculated by municipality and year. The final dataset conta
 ```
 
 This structure supports year-by-year analysis in the Streamlit dashboard and future panel-data modeling.
+
+## Deflators
+
+Inflation and price adjustments are stored in:
+
+```text
+diretorios/climate_risk_index/data/raw_data/IPEADATA/
+```
+
+Current deflator files:
+
+- `deflator do PIB.xls`: GDP implicit deflator used to calculate real GDP.
+- `IGP-DI indice.xls`: IGP-DI index used to calculate real agricultural production values.
+- `IPCA.xls`: IPCA index used for the planned fiscal expenditure module.
+
+The deflation rule is:
+
+```text
+real value = (nominal value / deflator index) x 100
+```
 
 ## Missing Data And Harmonization Rules
 
@@ -100,6 +120,7 @@ Main data sources include:
 - RAIS industrial structure
 - CELESC municipal energy consumption
 - IBGE/SIDRA economic and agricultural indicators
+- IPEADATA deflator indexes
 - Population interpolation dataset for 2002-2023
 - Santa Catarina municipal shapefiles
 
@@ -115,9 +136,15 @@ diretorios/climate_risk_index/
 |
 |-- data/
 |   |-- raw_data/                       # Original input files
+|   |   |-- CELESC/
+|   |   |-- IPEADATA/                   # Deflators: GDP, IGP-DI, IPCA
+|   |   |-- RAIS/
+|   |   |-- SICONFI/
+|   |   |-- shapes/
+|   |   |-- terraclimate/
 |   |-- data_handling/                  # Intermediate handled datasets
 |
-|-- output/                            # Final app-ready outputs
+|-- output/                             # Final app-ready outputs
 |   |-- climate_risk_index_2002_2023.csv
 |   |-- dashboard_dataset_2002_2023.csv
 |   |-- exposure_index_2002_2023.csv
@@ -180,14 +207,39 @@ diretorios/climate_risk_index/output/dashboard_dataset_2002_2023.csv
 
 It includes the final risk score, sub-indexes, normalized component variables, rankings, and variables used by the dashboard.
 
-## Planned Extension
+## Planned Economic Impact Extension
 
-The next project step is an economic impact module focused on municipal fiscal expenditure. The planned approach is a panel-data model using the climate risk index time series and municipal expenditure data, with municipality and year fixed effects.
+The next project step is an `economic_impact.py` module focused on municipal fiscal expenditure.
+
+The fiscal input file is:
+
+```text
+diretorios/climate_risk_index/data/raw_data/SICONFI/municipio_despesa.csv
+```
+
+The planned fiscal filters are:
+
+- `descricao_conta = Despesas Orcamentarias`
+- `tipo_despesa = Despesas Empenhadas`
+
+Nominal fiscal values will be deflated with:
+
+```text
+diretorios/climate_risk_index/data/raw_data/IPEADATA/IPCA.xls
+```
+
+using:
+
+```text
+real expense = (nominal expense / IPCA index) x 100
+```
+
+The planned empirical approach is a panel-data model using the climate risk index time series and municipal expenditure data, with municipality and year fixed effects.
 
 ## Author
 
 Rebecca Lorandi Silveira Lara  
-Industrial Economics Researcher - Observatório FIESC
+Industrial Economics Researcher - Observatorio FIESC
 
 ## Notes
 
