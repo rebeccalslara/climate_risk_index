@@ -76,7 +76,7 @@ EXPENSE_SCOPES = [
     {
         "expense_scope": "industrial",
         "expense_label": "Industrial expenses",
-        "path": RAW_SICONFI_DIR / "municipio_despesa_industrial.csv",
+        "path": RAW_SICONFI_DIR / "municipio_despesa_industrias.csv",
         "description_filter": None,
     },
 ]

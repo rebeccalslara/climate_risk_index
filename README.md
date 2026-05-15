@@ -217,7 +217,7 @@ The script currently runs the same model for three fiscal scopes:
 ```text
 total         -> data/raw_data/SICONFI/municipio_despesa.csv
 environmental -> data/raw_data/SICONFI/municipio_despesa_ambiental.csv
-industrial    -> data/raw_data/SICONFI/municipio_despesa_industrial.csv
+industrial    -> data/raw_data/SICONFI/municipio_despesa_industrias.csv
 ```
 
 Fiscal filters:
@@ -251,8 +251,6 @@ log(real_expense_it) =
 ```
 
 No control variables are included in the first version. Missing fiscal values are temporally interpolated only when they are internal gaps in an existing municipal time series. Pre-creation years for `BALNEARIO RINCAO` and `PESCARIA BRAVA` remain missing.
-
-At the current stage, the environmental and industrial raw files should be checked before substantive interpretation, because they may contain the same downloaded data.
 
 Economic impact outputs:
 
