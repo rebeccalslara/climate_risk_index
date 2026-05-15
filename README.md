@@ -210,21 +210,18 @@ It includes the final risk score, sub-indexes, normalized component variables, r
 
 ## Economic Impact Module
 
-The `economic_impact.py` script estimates the association between climate risk and municipal fiscal expenditure.
+The `economic_impact.py` script estimates the association between climate risk and municipal environmental expenditure.
 
-The script currently runs the same model for three fiscal scopes:
+The fiscal input file is:
 
 ```text
-total         -> data/raw_data/SICONFI/municipio_despesa.csv
-environmental -> data/raw_data/SICONFI/municipio_despesa_ambiental.csv
-industrial    -> data/raw_data/SICONFI/municipio_despesa_industrias.csv
+diretorios/climate_risk_index/data/raw_data/SICONFI/municipio_despesa_ambiental.csv
 ```
 
 Fiscal filters:
 
-- Total expenses: `descricao_conta = Despesas Orcamentarias` and `tipo_despesa = Despesas Empenhadas`
-- Environmental expenses: `tipo_despesa = Despesas Empenhadas`; all `descricao_conta` rows are summed
-- Industrial expenses: `tipo_despesa = Despesas Empenhadas`; all `descricao_conta` rows are summed
+- `tipo_despesa = Despesas Empenhadas`
+- all environmental `descricao_conta` rows are summed
 
 Nominal fiscal values are deflated with:
 
@@ -241,7 +238,7 @@ real expense = (nominal expense / IPCA index) x 100
 The current model is:
 
 ```text
-log(real_expense_it) =
+log(real_environmental_expense_it) =
     beta0 * risk_norm_it
   + beta1 * risk_norm_i,t-1
   + beta2 * risk_norm_i,t-2
@@ -261,7 +258,7 @@ diretorios/climate_risk_index/output/economic_impact_results_2002_2023.csv
 diretorios/climate_risk_index/output/economic_impact_municipal_2002_2023.csv
 ```
 
-The monetary impact estimates translate a `0.1` increase in `risk_norm` into each municipality's own fiscal scale. Values in reais should not be interpreted as direct cross-municipality rankings, because larger municipalities naturally have larger total budgets.
+The monetary impact estimates translate a `0.1` increase in `risk_norm` into each municipality's own environmental-expense scale. Values in reais should not be interpreted as direct cross-municipality rankings, because municipalities have different budget sizes and reporting structures.
 
 ## Author
 
