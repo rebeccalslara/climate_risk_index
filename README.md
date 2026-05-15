@@ -212,18 +212,29 @@ It includes the final risk score, sub-indexes, normalized component variables, r
 
 The `economic_impact.py` script estimates the association between climate risk and municipal environmental expenditure.
 
-The fiscal input file is:
+Fiscal expense input:
 
 ```text
-diretorios/climate_risk_index/data/raw_data/SICONFI/municipio_despesa_ambiental.csv
+diretorios/climate_risk_index/data/raw_data/SICONFI/Interface com RSiconfi - Despesas Gestão Ambiental.xlsx
 ```
 
-Fiscal filters:
+Fiscal expense fields:
 
-- `tipo_despesa = Despesas Empenhadas`
-- all environmental `descricao_conta` rows are summed
+- municipality: `NO_ENTE`
+- year: `AN_EXERCICIO`
+- nominal environmental expense: `VALUE`
+- no filter is applied; bimonthly rows are summed by municipality and year
+- current coverage: 2015-2023
 
-Nominal fiscal values are deflated with:
+Revenue control:
+
+```text
+diretorios/climate_risk_index/data/raw_data/SICONFI/municipio_receita_transferencia.csv
+```
+
+Transfer revenue uses the Cota ICMS transfer file. This is used as the fiscal capacity control because climate and environmental expenses are often financed through transferred resources.
+
+Nominal expense and revenue values are deflated with:
 
 ```text
 diretorios/climate_risk_index/data/raw_data/IPEADATA/IPCA.xls
@@ -232,22 +243,23 @@ diretorios/climate_risk_index/data/raw_data/IPEADATA/IPCA.xls
 using:
 
 ```text
-real expense = (nominal expense / IPCA index) x 100
+real value = (nominal value / IPCA index) x 100
 ```
 
 The current model is:
 
 ```text
 log(real_environmental_expense_it) =
-    beta0 * risk_norm_it
-  + beta1 * risk_norm_i,t-1
-  + beta2 * risk_norm_i,t-2
+    beta0 * risk_mean_3yr_it
+  + beta1 * log(real_transfer_revenue_it)
   + municipality fixed effects
   + year fixed effects
   + error_it
 ```
 
-No control variables are included in the first version. Missing fiscal values are temporally interpolated only when they are internal gaps in an existing municipal time series. Pre-creation years for `BALNEARIO RINCAO` and `PESCARIA BRAVA` remain missing.
+`risk_mean_3yr` is the average of current risk, one-year lagged risk, and two-year lagged risk. This captures delayed climate pressure while avoiding multicollinearity among highly correlated separate lag terms.
+
+Missing fiscal and revenue values are temporally interpolated only when they are internal gaps in an existing municipal time series. Pre-creation years for `BALNEARIO RINCAO` and `PESCARIA BRAVA` remain missing.
 
 Economic impact outputs:
 

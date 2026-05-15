@@ -723,13 +723,20 @@ with tab0:
             orientation="h",
             color="risk_norm",
             color_continuous_scale="OrRd", 
+            text="risk_norm",
             labels={"risk_norm": "Índice de Risco Climático"}
+        )
+
+        fig_top.update_traces(
+            texttemplate="%{x:.3f}",
+            textposition="outside",
+            cliponaxis=False
         )
 
         fig_top.update_layout(
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(l=0, r=0, t=0, b=0),
+            margin=dict(l=0, r=45, t=0, b=0),
             coloraxis_showscale=False,
             height=300,
             font=dict(color="white"),
@@ -755,7 +762,14 @@ with tab0:
             orientation="h",
             color="risk_norm",
             color_continuous_scale="Blues", 
+            text="risk_norm",
             labels={"risk_norm": "Índice de Risco Climático"}
+        )
+
+        fig_bot.update_traces(
+            texttemplate="%{x:.3f}",
+            textposition="outside",
+            cliponaxis=False
         )
 
         fig_bot.update_layout(
@@ -766,7 +780,7 @@ with tab0:
             ),
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(l=0, r=0, t=0, b=0),
+            margin=dict(l=0, r=45, t=0, b=0),
             height=300,
             coloraxis_showscale=False,
             font=dict(color="white"),

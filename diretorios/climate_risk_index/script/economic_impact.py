@@ -7,9 +7,8 @@ Goal:
 
 Model:
   log(real_environmental_expense_it) =
-      beta0 * risk_norm_it
-    + beta1 * risk_norm_i,t-1
-    + beta2 * risk_norm_i,t-2
+      beta0 * risk_mean_3yr_it
+    + beta1 * log(real_transfer_revenue_it)
     + municipality fixed effects
     + year fixed effects
     + error_it
@@ -51,7 +50,8 @@ YEARS = list(range(2002, 2024))
 DELTA_RISK = 0.1
 
 RISK_PATH = OUTPUT_DIR / "climate_risk_index_2002_2023.csv"
-FISCAL_PATH = RAW_SICONFI_DIR / "municipio_despesa_ambiental.csv"
+ENV_EXPENSE_PATH = RAW_SICONFI_DIR / "Interface com RSiconfi - Despesas Gestão Ambiental.xlsx"
+TRANSFER_REVENUE_PATH = RAW_SICONFI_DIR / "municipio_receita_transferencia.csv"
 IPCA_PATH = RAW_IPEADATA_DIR / "IPCA.xls"
 
 EXPENSE_SCOPE = "environmental"
@@ -122,11 +122,29 @@ def pct_effect(beta, delta=DELTA_RISK):
     return np.exp(beta * delta) - 1
 
 
+def safe_log(series):
+    """Return log for positive values only, leaving zero/negative/missing as NaN."""
+    series = pd.to_numeric(series, errors="coerce")
+    output = pd.Series(np.nan, index=series.index, dtype="float64")
+    positive = series > 0
+    output.loc[positive] = np.log(series.loc[positive])
+    return output
+
+
+def interpolate_inside_by_municipio(df, value_col, output_col):
+    df = df.sort_values(["municipio", "ano"]).copy()
+    df[output_col] = (
+        df.groupby("municipio")[value_col]
+        .transform(lambda s: s.interpolate(method="linear", limit_area="inside"))
+    )
+    return df
+
+
 # =========================
 # LOAD RISK PANEL
 # =========================
 
-print("\n[1/7] Loading climate risk panel...")
+print("\n[1/8] Loading climate risk panel...")
 
 risk = pd.read_csv(RISK_PATH)
 risk["municipio"] = clean_municipio_series(risk["municipio"])
@@ -135,7 +153,8 @@ risk = risk[risk["ano"].isin(YEARS)].copy()
 
 risk_cols = [
     "municipio", "ano", "risk_norm", "climate_risk_index",
-    "hazard_index", "exposure_index", "vulnerability_index"
+    "hazard_index", "exposure_index", "vulnerability_index",
+    "energia_pc_norm", "agro_pc_norm"
 ]
 risk = risk[risk_cols].drop_duplicates(["municipio", "ano"])
 
@@ -145,40 +164,50 @@ print(f"  Years: {risk['ano'].min()}-{risk['ano'].max()}")
 
 
 # =========================
-# LOAD ENVIRONMENTAL FISCAL DATA
+# LOAD ENVIRONMENTAL EXPENSES
 # =========================
 
-print("\n[2/7] Loading SICONFI environmental expenses...")
+print("\n[2/8] Loading SICONFI environmental expenses...")
 
-fiscal = pd.read_csv(FISCAL_PATH, sep=";", encoding="utf-8")
-fiscal["tipo_norm"] = fiscal["tipo_despesa"].apply(normalize_text)
-fiscal = fiscal[fiscal["tipo_norm"] == "DESPESAS EMPENHADAS"].copy()
-
-fiscal["municipio"] = clean_municipio_series(fiscal["nome_municipio"])
-fiscal["ano"] = pd.to_numeric(fiscal["exercicio"], errors="coerce").astype(int)
-fiscal["expense_nominal"] = to_numeric(fiscal["valor"])
-fiscal = fiscal[fiscal["ano"].isin(YEARS)].copy()
-
-fiscal = fiscal.groupby(["municipio", "ano"], as_index=False).agg({
-    "codigo_ibge7": "first",
+expense = pd.read_excel(ENV_EXPENSE_PATH, header=1)
+expense["municipio"] = clean_municipio_series(expense["NO_ENTE"])
+expense["ano"] = pd.to_numeric(expense["AN_EXERCICIO"], errors="coerce").astype(int)
+expense["expense_nominal"] = to_numeric(expense["VALUE"])
+expense = expense[expense["ano"].isin(YEARS)].copy()
+expense = expense.groupby(["municipio", "ano"], as_index=False).agg({
+    "ID_ENTE": "first",
     "expense_nominal": "sum"
 })
 
-fiscal_names = set(fiscal["municipio"].unique())
-risk_names = set(risk["municipio"].unique())
+print(f"  Filtered expense records: {len(expense)}")
+print(f"  Municipalities: {expense['municipio'].nunique()}")
+print(f"  Years: {expense['ano'].min()}-{expense['ano'].max()}")
 
-print(f"  Filtered fiscal records: {len(fiscal)}")
-print(f"  Municipalities: {fiscal['municipio'].nunique()}")
-print(f"  Years: {fiscal['ano'].min()}-{fiscal['ano'].max()}")
-print(f"  Risk names not in fiscal: {len(risk_names - fiscal_names)}")
-print(f"  Fiscal names not in risk: {len(fiscal_names - risk_names)}")
+
+# =========================
+# LOAD REVENUE CONTROLS
+# =========================
+
+print("\n[3/8] Loading transfer revenue control...")
+
+transfer_revenue = pd.read_csv(TRANSFER_REVENUE_PATH, sep=";", encoding="utf-8")
+transfer_revenue["municipio"] = clean_municipio_series(transfer_revenue["nome_municipio"])
+transfer_revenue["ano"] = pd.to_numeric(transfer_revenue["exercicio"], errors="coerce").astype(int)
+transfer_revenue["transfer_revenue_nominal"] = to_numeric(transfer_revenue["valor"])
+transfer_revenue = transfer_revenue[transfer_revenue["ano"].isin(YEARS)].copy()
+transfer_revenue = transfer_revenue.groupby(["municipio", "ano"], as_index=False).agg({
+    "transfer_revenue_nominal": "sum"
+})
+
+print(f"  Transfer revenue records: {len(transfer_revenue)}")
+print(f"  Transfer revenue municipalities: {transfer_revenue['municipio'].nunique()}")
 
 
 # =========================
 # LOAD DEFLATOR
 # =========================
 
-print("\n[3/7] Loading IPCA deflator...")
+print("\n[4/8] Loading IPCA deflator...")
 
 ipca = pd.read_excel(IPCA_PATH)
 ipca = ipca.rename(columns={"Data": "ano", "Indice": "ipca_index"})
@@ -193,32 +222,39 @@ print(f"  IPCA records: {len(ipca)}")
 # BUILD PANEL
 # =========================
 
-print("\n[4/7] Building model panel and interpolating internal fiscal gaps...")
+print("\n[5/8] Building model panel and interpolating internal gaps...")
 
 panel = (
     risk
-    .merge(fiscal, on=["municipio", "ano"], how="left")
+    .merge(expense, on=["municipio", "ano"], how="left")
+    .merge(transfer_revenue, on=["municipio", "ano"], how="left")
     .merge(ipca, on="ano", how="left")
 )
 panel["expense_scope"] = EXPENSE_SCOPE
 panel["expense_label"] = EXPENSE_LABEL
-panel["real_expense_original"] = (panel["expense_nominal"] / panel["ipca_index"]) * 100
 
-panel = panel.sort_values(["municipio", "ano"]).copy()
-panel["real_expense"] = (
-    panel.groupby("municipio")["real_expense_original"]
-    .transform(lambda s: s.interpolate(method="linear", limit_area="inside"))
+panel["real_expense_original"] = (panel["expense_nominal"] / panel["ipca_index"]) * 100
+panel["real_transfer_revenue_original"] = (
+    panel["transfer_revenue_nominal"] / panel["ipca_index"]
+) * 100
+panel = interpolate_inside_by_municipio(panel, "real_expense_original", "real_expense")
+panel = interpolate_inside_by_municipio(
+    panel,
+    "real_transfer_revenue_original",
+    "real_transfer_revenue"
 )
+
 panel["expense_interpolated"] = panel["real_expense_original"].isna() & panel["real_expense"].notna()
 panel["expense_missing_after_interpolation"] = panel["real_expense"].isna()
+panel["transfer_revenue_interpolated"] = (
+    panel["real_transfer_revenue_original"].isna() &
+    panel["real_transfer_revenue"].notna()
+)
 
-missing_before = int(panel["real_expense_original"].isna().sum())
-interpolated = int(panel["expense_interpolated"].sum())
-missing_after = int(panel["expense_missing_after_interpolation"].sum())
-
-print(f"  Missing before interpolation: {missing_before}")
-print(f"  Interpolated municipality-years: {interpolated}")
-print(f"  Missing after interpolation: {missing_after}")
+print(f"  Missing expenses before interpolation: {int(panel['real_expense_original'].isna().sum())}")
+print(f"  Interpolated expense municipality-years: {int(panel['expense_interpolated'].sum())}")
+print(f"  Missing expenses after interpolation: {int(panel['expense_missing_after_interpolation'].sum())}")
+print(f"  Missing transfer revenue after interpolation: {int(panel['real_transfer_revenue'].isna().sum())}")
 
 raw_output = DATA_HANDLING_DIR / "economic_impact_raw_2002_2023.csv"
 panel.to_csv(raw_output, index=False, encoding="utf-8")
@@ -228,15 +264,21 @@ panel.to_csv(raw_output, index=False, encoding="utf-8")
 # LAGS AND MODEL DATA
 # =========================
 
-print("\n[5/7] Creating risk lags and model dataset...")
+print("\n[6/8] Creating risk lags and model dataset...")
 
+panel = panel.sort_values(["municipio", "ano"]).copy()
 panel["risk_norm_lag1"] = panel.groupby("municipio")["risk_norm"].shift(1)
 panel["risk_norm_lag2"] = panel.groupby("municipio")["risk_norm"].shift(2)
-panel["log_real_expense"] = np.where(panel["real_expense"] > 0, np.log(panel["real_expense"]), np.nan)
+panel["risk_mean_3yr"] = panel[["risk_norm", "risk_norm_lag1", "risk_norm_lag2"]].mean(
+    axis=1,
+    skipna=False
+)
+panel["log_real_expense"] = safe_log(panel["real_expense"])
+panel["log_real_transfer_revenue"] = safe_log(panel["real_transfer_revenue"])
 
 model_cols = [
     "municipio", "ano", "log_real_expense",
-    "risk_norm", "risk_norm_lag1", "risk_norm_lag2"
+    "risk_mean_3yr", "log_real_transfer_revenue"
 ]
 model_data = panel.dropna(subset=model_cols).copy()
 
@@ -252,11 +294,14 @@ print(f"  Model years: {model_data['ano'].min()}-{model_data['ano'].max()}")
 # PANEL FIXED EFFECTS MODEL
 # =========================
 
-print("\n[6/7] Estimating panel fixed effects model...")
+print("\n[7/8] Estimating panel fixed effects model...")
 
 model_panel = model_data.set_index(["municipio", "ano"])
 y = model_panel["log_real_expense"]
-X = model_panel[["risk_norm", "risk_norm_lag1", "risk_norm_lag2"]]
+X = model_panel[[
+    "risk_mean_3yr",
+    "log_real_transfer_revenue"
+]]
 
 model = PanelOLS(
     y,
@@ -286,23 +331,11 @@ for variable in params.index:
         "p_value": pvalues[variable],
         "conf_low": conf_int.loc[variable].iloc[0],
         "conf_high": conf_int.loc[variable].iloc[1],
-        "pct_effect_0_1": pct_effect(beta),
-        "pct_effect_0_1_percent": pct_effect(beta) * 100
+        "pct_effect_0_1": pct_effect(beta) if variable == "risk_mean_3yr" else np.nan,
+        "pct_effect_0_1_percent": (
+            pct_effect(beta) * 100 if variable == "risk_mean_3yr" else np.nan
+        )
     })
-
-cumulative_beta = params[["risk_norm", "risk_norm_lag1", "risk_norm_lag2"]].sum()
-results_rows.append({
-    "expense_scope": EXPENSE_SCOPE,
-    "expense_label": EXPENSE_LABEL,
-    "variable": "risk_norm_cumulative_lag0_lag2",
-    "coefficient": cumulative_beta,
-    "std_error_cluster_municipio": np.nan,
-    "p_value": np.nan,
-    "conf_low": np.nan,
-    "conf_high": np.nan,
-    "pct_effect_0_1": pct_effect(cumulative_beta),
-    "pct_effect_0_1_percent": pct_effect(cumulative_beta) * 100
-})
 
 results_df = pd.DataFrame(results_rows)
 results_df["nobs"] = int(results.nobs)
@@ -313,6 +346,7 @@ results_df["entity_effects"] = True
 results_df["time_effects"] = True
 results_df["dependent_variable"] = "log(real_environmental_expense)"
 results_df["delta_risk"] = DELTA_RISK
+results_df["controls"] = "log_real_transfer_revenue"
 results_df["interpretation_note"] = (
     "Monetary impacts are in each municipality's environmental-expense scale "
     "and are not directly comparable across municipalities."
@@ -326,23 +360,14 @@ results_df.to_csv(results_output, index=False, encoding="utf-8")
 # MUNICIPAL IMPACT ESTIMATES
 # =========================
 
-print("\n[7/7] Creating municipality-year monetary impact estimates...")
+print("\n[8/8] Creating municipality-year monetary impact estimates...")
 
-beta_0 = params["risk_norm"]
-beta_1 = params["risk_norm_lag1"]
-beta_2 = params["risk_norm_lag2"]
+beta_risk = params["risk_mean_3yr"]
 
 impact = panel.copy()
-impact["pct_effect_0_1_same_year"] = pct_effect(beta_0)
-impact["pct_effect_0_1_lag1"] = pct_effect(beta_1)
-impact["pct_effect_0_1_lag2"] = pct_effect(beta_2)
-impact["pct_effect_0_1_cumulative_lag0_lag2"] = pct_effect(cumulative_beta)
-
-impact["impact_real_brl_0_1_same_year"] = impact["real_expense"] * impact["pct_effect_0_1_same_year"]
-impact["impact_real_brl_0_1_lag1"] = impact["real_expense"] * impact["pct_effect_0_1_lag1"]
-impact["impact_real_brl_0_1_lag2"] = impact["real_expense"] * impact["pct_effect_0_1_lag2"]
-impact["impact_real_brl_0_1_cumulative_lag0_lag2"] = (
-    impact["real_expense"] * impact["pct_effect_0_1_cumulative_lag0_lag2"]
+impact["pct_effect_0_1_risk_mean_3yr"] = pct_effect(beta_risk)
+impact["impact_real_brl_0_1_risk_mean_3yr"] = (
+    impact["real_expense"] * impact["pct_effect_0_1_risk_mean_3yr"]
 )
 impact["impact_comparability_note"] = (
     "Values in reais reflect each municipality's environmental-expense scale and "
@@ -351,17 +376,13 @@ impact["impact_comparability_note"] = (
 
 impact_cols = [
     "expense_scope", "expense_label", "municipio", "ano",
-    "risk_norm", "risk_norm_lag1", "risk_norm_lag2",
+    "risk_norm", "risk_norm_lag1", "risk_norm_lag2", "risk_mean_3yr",
     "real_expense", "real_expense_original",
+    "real_transfer_revenue", "real_transfer_revenue_original",
     "expense_interpolated", "expense_missing_after_interpolation",
-    "pct_effect_0_1_same_year",
-    "pct_effect_0_1_lag1",
-    "pct_effect_0_1_lag2",
-    "pct_effect_0_1_cumulative_lag0_lag2",
-    "impact_real_brl_0_1_same_year",
-    "impact_real_brl_0_1_lag1",
-    "impact_real_brl_0_1_lag2",
-    "impact_real_brl_0_1_cumulative_lag0_lag2",
+    "transfer_revenue_interpolated",
+    "pct_effect_0_1_risk_mean_3yr",
+    "impact_real_brl_0_1_risk_mean_3yr",
     "impact_comparability_note"
 ]
 
@@ -375,5 +396,10 @@ print(f"  {results_output}")
 print(f"  {impact_output}")
 
 print("\nKey coefficients:")
-print(results_df[["variable", "coefficient", "pct_effect_0_1_percent", "p_value"]].to_string(index=False))
+print(
+    results_df[
+        ["variable", "coefficient", "pct_effect_0_1_percent", "p_value"]
+    ].to_string(index=False)
+)
+
 print("\nDone.")
