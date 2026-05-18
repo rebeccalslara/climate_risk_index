@@ -8,6 +8,7 @@
 # =========================
 # LOCAL DATA FOLDERS
 # =========================
+ECONOMIC_IMPACT_MODEL_REPORT.txt
 diretorios/testing/
 diretorios/climate_risk_index/data/raw_data/terraclimate/
 diretorios/climate_risk_index/data/raw_data/terraclimate/**
