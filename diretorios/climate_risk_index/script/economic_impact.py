@@ -146,22 +146,34 @@ def interpolate_inside_by_municipio(df, value_col, output_col):
     return df
 
 
-def load_va_panel(path, value_col, years):
+def load_va_panel(path, value_col, years, valid_municipalities=None):
     """Load a wide IPEADATA municipal value-added workbook into long format."""
-    wide = pd.read_excel(path, sheet_name="Séries")
+    wide = pd.read_excel(path, sheet_name=0)
+    municipio_col = [
+        col for col in wide.columns
+        if normalize_text(col) == "MUNICIPIO"
+    ][0]
     year_cols = [
         col for col in wide.columns
         if str(col).isdigit() and int(col) in years
     ]
     long = wide.melt(
-        id_vars=["Município"],
+        id_vars=[municipio_col],
         value_vars=year_cols,
         var_name="ano",
         value_name=value_col
     )
-    long["municipio"] = clean_municipio_series(long["Município"])
+    long["municipio"] = clean_municipio_series(long[municipio_col])
     long["ano"] = pd.to_numeric(long["ano"], errors="coerce").astype(int)
     long[value_col] = to_numeric(long[value_col])
+
+    if valid_municipalities is not None:
+        valid_municipalities = set(valid_municipalities)
+        extra_names = sorted(set(long["municipio"].dropna().unique()) - valid_municipalities)
+        if extra_names:
+            print(f"  Dropping VA names outside project universe from {path.name}: {extra_names}")
+        long = long[long["municipio"].isin(valid_municipalities)].copy()
+
     return long[["municipio", "ano", value_col]].drop_duplicates(["municipio", "ano"])
 
 
@@ -636,8 +648,19 @@ gdp["ano"] = pd.to_numeric(gdp["ano"], errors="coerce").astype(int)
 gdp["real_gdp"] = to_numeric(gdp["pib_real_mil_reais"])
 gdp = gdp[gdp["ano"].isin(GDP_YEARS)][["municipio", "ano", "real_gdp"]].copy()
 
-va_industrial = load_va_panel(VA_INDUSTRIAL_PATH, "va_industrial_2010", GDP_YEARS)
-va_agro = load_va_panel(VA_AGRO_PATH, "va_agro_2010", GDP_YEARS)
+project_municipalities = set(risk["municipio"].dropna().unique())
+va_industrial = load_va_panel(
+    VA_INDUSTRIAL_PATH,
+    "va_industrial_2010",
+    GDP_YEARS,
+    valid_municipalities=project_municipalities
+)
+va_agro = load_va_panel(
+    VA_AGRO_PATH,
+    "va_agro_2010",
+    GDP_YEARS,
+    valid_municipalities=project_municipalities
+)
 
 print(f"  GDP records: {len(gdp)}")
 print(f"  GDP municipalities: {gdp['municipio'].nunique()}")
