@@ -1,0 +1,666 @@
+ECONOMIC IMPACT - PREFERRED MODELS REPORT
+Climate Risk Index - Santa Catarina Municipalities
+Created: 2026-05-20
+Internal use report
+
+================================================================================
+1. PURPOSE OF THIS REPORT
+================================================================================
+
+This report documents the two preferred economic impact models currently used in
+the dashboard:
+
+    1. GDP growth model
+    2. Agricultural value-added growth model
+
+The objective is to translate changes in the Climate Risk Index into an
+interpretable economic association, while being transparent about the limits of
+the model.
+
+This is not a causal proof report. The models estimate associations using panel
+data with municipality fixed effects and year fixed effects. The results should
+be interpreted as evidence that changes in climate-industrial risk are associated
+with subsequent changes in municipal economic performance.
+
+
+================================================================================
+2. WHY THE MODEL CHANGED OVER TIME
+================================================================================
+
+The initial idea was to estimate the effect of the full Climate Risk Index on
+GDP. This was not adopted as the preferred model because the original index
+contains an inverted GDP per capita vulnerability variable:
+
+    pib_pc_inv
+
+Using GDP as the dependent variable while GDP per capita is also embedded in the
+index creates a conceptual circularity problem. In that case, the index partially
+contains information about the outcome variable.
+
+To reduce this problem, the preferred GDP and agro models use:
+
+    risk_norm_without_GDP
+
+This version of the risk index removes the GDP per capita inverted component from
+the vulnerability index before recomputing the aggregate climate risk index.
+
+This does not make the index purely climatic. It still includes industrial
+exposure, agriculture sensitivity, energy intensity, and hazard. Therefore it is
+best understood as an economic-climate risk index. However, removing GDP makes
+the GDP model more defensible.
+
+
+================================================================================
+3. DATA AND SAMPLE
+================================================================================
+
+Period used:
+
+    2003-2021
+
+Reason:
+
+    The model uses growth rates and lagged risk, so 2002 is lost because it has
+    no previous year growth/lag information. The value-added data used for
+    sectoral controls covers up to 2021.
+
+Municipalities:
+
+    295 Santa Catarina municipalities
+
+Observations:
+
+    5,583 municipality-year observations
+
+Key data sources:
+
+    GDP:
+        data/raw_data/RAIS/PIB - 2002 a 2023.xlsx
+        Converted to real GDP using GDP implicit deflator.
+
+    Industrial value added:
+        data/raw_data/IPEADATA/VA Industrial - preços 2010.xls
+        Already expressed in 2010 prices. Not deflated again.
+
+    Agricultural value added:
+        data/raw_data/IPEADATA/VA Agro.xls
+        Already expressed in 2010 prices. Not deflated again.
+
+    Climate Risk Index:
+        output/climate_risk_index_2002_2023.csv
+        Recomputed internally without the GDP vulnerability component.
+
+Important data validation:
+
+    The VA Industrial and VA Agro files contained one extra municipality name:
+
+        SAO MIGUEL
+
+    This is not part of the 295-municipality Santa Catarina project universe and
+    was dropped. SAO MIGUEL DO OESTE was preserved.
+
+
+================================================================================
+4. MODEL 1 - GDP GROWTH MODEL
+================================================================================
+
+4.1 Research question
+---------------------
+
+Does an increase in the climate-industrial risk index, excluding GDP from the
+index, predict lower municipal GDP growth in the following year?
+
+
+4.2 Equation
+------------
+
+    Delta log(real GDP_it) =
+        beta * risk_norm_without_GDP_i,t-1
+      + gamma * Delta log(VA industrial_it)
+      + municipality fixed effects
+      + year fixed effects
+      + error_it
+
+
+4.3 Dependent variable
+----------------------
+
+    gdp_growth_log
+
+Defined as:
+
+    log(real GDP_t) - log(real GDP_t-1)
+
+This is approximately the real GDP growth rate.
+
+
+4.4 Main risk variable
+----------------------
+
+    risk_norm_without_GDP_lag1
+
+This is the Climate Risk Index without the GDP vulnerability component, lagged by
+one year.
+
+Reason for lag:
+
+    Economic effects of climate risk are not expected to occur only
+    contemporaneously. A one-year lag is economically plausible because climate
+    stress can affect production, investment decisions, supply chains, local
+    budgets, and firm behavior with delay.
+
+
+4.5 Control variable
+--------------------
+
+    va_industrial_growth_log
+
+Defined as:
+
+    log(VA industrial_t) - log(VA industrial_t-1)
+
+Reason for inclusion:
+
+    The Climate Risk Index includes industrial exposure. Municipalities with
+    growing industrial structure may also have growing GDP. Without controlling
+    for industrial value-added growth, the risk coefficient could capture the
+    positive relationship between industrial expansion and GDP instead of the
+    negative economic pressure associated with climate risk.
+
+Why this control is defensible:
+
+    - GDP contains industrial production.
+    - The index includes industrial exposure.
+    - Industrial growth is a direct economic channel that must be separated from
+      the climate-risk signal.
+    - The correlation checks did not indicate that this control fully duplicates
+      the risk variable.
+
+Important limitation:
+
+    This control can also be interpreted as a strong control because industrial
+    VA is part of municipal GDP. It helps isolate the risk component, but it may
+    also absorb part of the economic mechanism if climate risk affects industry
+    directly. Therefore, the GDP model should be interpreted as:
+
+        climate-risk association with GDP growth, holding industrial VA growth
+        constant.
+
+
+4.6 Fixed effects
+-----------------
+
+The preferred specification uses:
+
+    municipality fixed effects = yes
+    year fixed effects         = yes
+
+Municipality fixed effects absorb time-invariant differences between
+municipalities, such as geography, long-run economic structure, institutional
+capacity, historical productivity, location, and stable vulnerability.
+
+Year fixed effects absorb shocks common to all municipalities in the same year,
+such as macroeconomic cycles, national policy changes, inflationary environment,
+and broad state/federal conditions.
+
+
+4.7 Main result
+---------------
+
+Preferred specification:
+
+    Municipality FE + year FE
+
+Result for risk_norm_without_GDP_lag1:
+
+    coefficient:        -0.0560
+    clustered std err:   0.0266
+    p-value:             0.0353
+    95% CI:             [-0.1082, -0.0039]
+
+Interpretation for a 0.1 increase in risk:
+
+    -0.559 percentage points in GDP growth
+
+This means that, holding industrial VA growth constant and controlling for
+municipality and year fixed effects, an increase of 0.1 in the risk index
+without GDP is associated with approximately 0.56 percentage points lower real
+GDP growth.
+
+Result for va_industrial_growth_log:
+
+    coefficient:         0.3233
+    p-value:             0.0000
+
+Interpretation:
+
+    Industrial VA growth is strongly and positively associated with GDP growth,
+    as expected.
+
+
+4.8 Robustness across fixed effects
+-----------------------------------
+
+Risk coefficient across specifications:
+
+    Municipality FE + year FE:
+        coefficient = -0.0560
+        p-value     = 0.0353
+        effect      = -0.559 pp for +0.1 risk
+
+    Municipality FE only:
+        coefficient = -0.0812
+        p-value     = 0.0006
+        effect      = -0.809 pp for +0.1 risk
+
+    Year FE only:
+        coefficient = -0.0091
+        p-value     = 0.2107
+        effect      = -0.091 pp for +0.1 risk
+
+    No fixed effects:
+        coefficient = -0.0142
+        p-value     = 0.0597
+        effect      = -0.142 pp for +0.1 risk
+
+Interpretation:
+
+    The negative sign survives in all specifications. The preferred full fixed
+    effects model is statistically significant at the 5% level. This gives the
+    GDP model more credibility than the earlier fiscal model.
+
+
+================================================================================
+5. MODEL 2 - AGRICULTURAL VALUE-ADDED GROWTH MODEL
+================================================================================
+
+5.1 Research question
+---------------------
+
+Is the negative economic association between climate-industrial risk and GDP
+partly transmitted through agricultural production?
+
+
+5.2 Equation
+------------
+
+    Delta log(VA agro_it) =
+        beta * risk_norm_without_GDP_i,t-1
+      + municipality fixed effects
+      + year fixed effects
+      + error_it
+
+
+5.3 Dependent variable
+----------------------
+
+    va_agro_growth_log
+
+Defined as:
+
+    log(VA agro_t) - log(VA agro_t-1)
+
+This approximates agricultural value-added growth.
+
+
+5.4 Main risk variable
+----------------------
+
+    risk_norm_without_GDP_lag1
+
+The same lagged risk index used in the preferred GDP model.
+
+
+5.5 Controls
+------------
+
+No additional control variables were included in the preferred agro mechanism
+model.
+
+Reason:
+
+    This model is used as a mechanism check. The goal is to observe whether the
+    climate-industrial risk index is associated with subsequent agricultural VA
+    growth. Adding sectoral controls could over-control the channel we are trying
+    to measure.
+
+
+5.6 Fixed effects
+-----------------
+
+The model uses:
+
+    municipality fixed effects = yes
+    year fixed effects         = yes
+
+This means the model compares changes within the same municipality over time,
+net of statewide/common annual shocks.
+
+
+5.7 Main result
+---------------
+
+Result for risk_norm_without_GDP_lag1:
+
+    coefficient:        -0.3745
+    clustered std err:   0.0797
+    p-value:             0.000003
+    95% CI:             [-0.5307, -0.2183]
+
+Interpretation for a 0.1 increase in risk:
+
+    -3.675 percentage points in agricultural VA growth
+
+This is the strongest preferred result. It suggests that the agricultural
+channel is highly sensitive to changes in climate-industrial risk.
+
+
+================================================================================
+6. INDUSTRIAL SPILLOVER CHECK
+================================================================================
+
+An exploratory spillover model was also tested:
+
+    Delta log(VA industrial_it) =
+        beta * Delta log(VA agro_it)
+      + municipality fixed effects
+      + year fixed effects
+      + error_it
+
+Result:
+
+    coefficient on va_agro_growth_log:  0.1156
+    p-value:                            0.0003
+
+Interpretation for a 0.1 increase in agro growth:
+
+    +1.163 percentage points in industrial VA growth
+
+This does not prove that climate risk directly affects industry through
+agriculture. However, it supports the idea that agricultural performance and
+industrial performance are linked in the municipal economy.
+
+Dashboard interpretation:
+
+    The dashboard presents the industrial channel as a spillover, not as a direct
+    climate-risk effect on industry.
+
+
+================================================================================
+7. HAZARD-ONLY ROBUSTNESS MODEL
+================================================================================
+
+A hazard-only model was also tested:
+
+    Delta log(real GDP_it) =
+        beta * hazard_index_it
+      + gamma * Delta log(VA industrial_it)
+      + municipality fixed effects
+      + year fixed effects
+      + error_it
+
+Result for hazard_index:
+
+    coefficient:        -0.0562
+    p-value:             0.0006
+    effect of +0.1:      -0.560 percentage points in GDP growth
+
+Interpretation:
+
+    Current hazard alone is negatively associated with GDP growth, even after
+    controlling for industrial VA growth. This supports the idea that the model
+    is not only capturing economic structure.
+
+Why it is not the main model:
+
+    The project objective is to communicate the integrated Climate Risk Index.
+    Hazard-only is useful as robustness evidence, but the dashboard's main story
+    is about the economic meaning of the combined index.
+
+
+================================================================================
+8. WHY THE TWO PREFERRED MODELS ARE DEFENSIBLE
+================================================================================
+
+The preferred models are defensible because:
+
+    1. GDP was removed from the risk index before using GDP as the dependent
+       variable.
+
+    2. The risk variable is lagged by one year, which is consistent with delayed
+       economic effects.
+
+    3. The GDP model controls for industrial VA growth, reducing the risk that
+       the coefficient simply reflects industrial expansion.
+
+    4. Both preferred models use municipality fixed effects and year fixed
+       effects.
+
+    5. Standard errors are clustered by municipality.
+
+    6. The GDP result is negative and statistically significant in the preferred
+       full fixed effects specification.
+
+    7. The agricultural channel result is stronger and highly statistically
+       significant.
+
+    8. The hazard-only robustness model also shows a negative association with
+       GDP growth.
+
+
+================================================================================
+9. LIMITATIONS AND POSSIBLE ERRORS
+================================================================================
+
+9.1 Association, not causality
+------------------------------
+
+The models do not prove that climate risk caused GDP or agricultural value added
+to fall. They show statistically estimated associations in panel data.
+
+Stronger causal evidence would require an identification strategy such as:
+
+    - exogenous climate shocks,
+    - disaster/event records,
+    - difference-in-differences design,
+    - instrumental variables,
+    - or high-frequency event-based data.
+
+
+9.2 Risk index still contains economic structure
+------------------------------------------------
+
+Even without GDP, the risk index still includes industrial exposure and other
+economic variables. This is intentional for the project, because the index is an
+economic-climate risk index. But it means the coefficient should not be
+interpreted as a pure physical climate shock.
+
+
+9.3 Industrial VA control may be a strong control
+-------------------------------------------------
+
+Industrial VA growth helps separate industrial expansion from climate risk, but
+it is also part of GDP. If climate risk affects industry directly, this control
+may absorb part of the mechanism.
+
+Therefore, the GDP model should be interpreted as:
+
+    risk effect on GDP growth net of industrial VA growth,
+
+not:
+
+    total effect of climate risk on the whole municipal economy.
+
+
+9.4 Measurement and deflator issues
+-----------------------------------
+
+GDP values and VA values come from different sources and concepts:
+
+    GDP:
+        Produto Interno Bruto a preços correntes (Mil Reais), later deflated.
+
+    VA industrial/agro:
+        R$ (mil), a preços do ano 2010.
+
+The model uses growth rates, which reduces some comparability problems, but does
+not eliminate all measurement differences.
+
+
+9.5 Missing data and municipality creation
+------------------------------------------
+
+Balneario Rincao and Pescaria Brava were created later. Pre-creation years should
+not be interpreted as missing economic activity. They are structural absence from
+the municipal panel.
+
+
+9.6 Monetary conversion is illustrative
+---------------------------------------
+
+The dashboard converts estimated percentage effects into reais using the
+municipality's GDP or sectoral VA base. These monetary values are useful for
+communication, but they are model-associated estimates, not observed losses.
+
+The value in reais is not directly comparable across municipalities because
+larger municipalities naturally have larger economic bases.
+
+
+================================================================================
+10. WHY EARLIER MODELS WERE NOT ADOPTED
+================================================================================
+
+10.1 Full Climate Risk Index on GDP
+-----------------------------------
+
+This was rejected because the full index includes GDP per capita inverted inside
+vulnerability. Using full risk_norm to explain GDP creates a circularity problem.
+
+
+10.2 GDP level instead of GDP growth
+------------------------------------
+
+GDP levels are strongly related to municipality size and structure. Growth rates
+are more appropriate for studying oscillations over time.
+
+
+10.3 Environmental expense model
+--------------------------------
+
+The environmental expense model was useful as an internal diagnostic but was not
+adopted for dashboard communication.
+
+Preferred fiscal specification:
+
+    log(real_environmental_expense) =
+        beta * risk_mean_3yr
+      + gamma * log(real_transfer_revenue)
+      + municipality FE
+      + year FE
+
+Main result:
+
+    risk_mean_3yr coefficient = 0.1563
+    p-value                   = 0.9176
+
+Interpretation:
+
+    The risk coefficient was not statistically strong in the full fixed effects
+    model.
+
+However, transfer revenue was strong:
+
+    log_real_transfer_revenue coefficient = 0.8590
+    p-value                           = 0.0159
+
+This suggests that environmental spending is more directly associated with
+fiscal capacity/transfers than with the climate risk index itself.
+
+
+10.4 Total revenue control
+--------------------------
+
+Total revenue was tested but removed from the fiscal model because it did not
+improve the risk coefficient and conceptually overlapped with transfer revenue.
+
+
+10.5 Government expense and revenue growth controls
+---------------------------------------------------
+
+Government expenditure/revenue growth controls were tested in GDP growth
+explorations. They did not materially improve the preferred model and risked
+adding noise or over-controlling fiscal channels not central to the project
+story.
+
+
+10.6 Export growth control
+--------------------------
+
+Export growth was tested as a possible control. It was not retained because it
+was not statistically strong and did not change the core interpretation of the
+preferred model.
+
+
+10.7 Agro and services VA controls in the GDP model
+---------------------------------------------------
+
+Adding agriculture and services VA growth as controls was considered, but it
+risks over-controlling the outcome itself. GDP is composed of sectoral value
+added. If all main sectors are controlled, the model can become mechanically
+close to explaining GDP with its own components.
+
+The chosen compromise was to control industrial VA growth only because the
+Climate Risk Index is explicitly industrial and includes industrial exposure.
+
+
+================================================================================
+11. CURRENT DASHBOARD INTERPRETATION
+================================================================================
+
+The dashboard should communicate four ideas:
+
+    1. A rise in the climate-industrial risk index is associated with lower GDP
+       growth in the following year.
+
+    2. The agricultural channel is stronger: higher risk is associated with
+       materially lower agricultural VA growth.
+
+    3. Industrial impact is presented as an indirect spillover, not a direct
+       causal estimate.
+
+    4. Monetary values are communication estimates derived from model-associated
+       percentage effects and local economic bases.
+
+Suggested language:
+
+    "The estimated monetary values represent the portion of economic variation
+    associated with changes in climate risk according to the panel model. They
+    should not be interpreted as observed losses or causal damages."
+
+
+================================================================================
+12. FINAL POSITION
+================================================================================
+
+The current preferred model set is coherent and defensible for dashboard
+communication:
+
+    Model 1:
+        GDP growth on lagged risk_norm_without_GDP, controlling for industrial
+        VA growth, with municipality and year fixed effects.
+
+    Model 2:
+        Agricultural VA growth on lagged risk_norm_without_GDP, with
+        municipality and year fixed effects.
+
+Main interpretation:
+
+    The Climate Risk Index is economically meaningful. When the index rises, the
+    following year's municipal GDP growth tends to be lower, and the agricultural
+    channel appears to be one of the strongest transmission mechanisms.
+
+Main caution:
+
+    The estimates are associations from fixed effects panel models, not causal
+    proof of climate damages.
+

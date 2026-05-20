@@ -1,0 +1,354 @@
+STATISTICAL INSIGHTS REPORT
+Climate Risk Index - Santa Catarina Municipalities
+Created: 2026-05-20
+Internal use report
+
+================================================================================
+1. PURPOSE OF THIS REPORT
+================================================================================
+
+This report preserves the analytical content that was previously shown in the
+"Statistical Insights" tab of the Streamlit dashboard.
+
+The tab was removed from the public-facing app to keep the dashboard more focused
+on the main risk analysis and economic impact story. The statistical findings are
+kept here for internal documentation and model interpretation.
+
+The report covers:
+
+    1. Distribution of the Climate Risk Index
+    2. Risk structure and mismatch between subindices
+    3. Correlation between Hazard, Exposure and Vulnerability
+    4. Correlation between internal normalized variables
+
+Data source:
+
+    output/dashboard_dataset_2002_2023.csv
+
+
+================================================================================
+2. DATA COVERAGE
+================================================================================
+
+Full panel:
+
+    Years:          2002-2023
+    Municipalities: 295
+    Observations:   6,490 municipality-year rows
+
+Latest available year:
+
+    Year:           2023
+    Municipalities: 295
+    Observations:   295 municipality rows
+
+
+================================================================================
+3. DISTRIBUTION OF THE CLIMATE RISK INDEX
+================================================================================
+
+3.1 Full panel, 2002-2023
+-------------------------
+
+Climate Risk Index statistics:
+
+    Mean:              0.193
+    Standard deviation:0.142
+    Skewness:          1.560
+    Minimum:           0.000
+    25th percentile:   0.087
+    Median:            0.164
+    75th percentile:   0.270
+    Maximum:           1.000
+
+Interpretation:
+
+    The distribution is positively skewed. Most municipality-year observations
+    are concentrated at lower levels of climate-industrial risk, while a smaller
+    group reaches substantially higher values.
+
+    This supports the interpretation that industrial climate risk in Santa
+    Catarina is not evenly distributed. It is concentrated in specific municipal
+    contexts where hazard, exposure and vulnerability align more strongly.
+
+
+3.2 Latest year, 2023
+---------------------
+
+Climate Risk Index statistics:
+
+    Mean:              0.223
+    Standard deviation:0.154
+    Skewness:          1.300
+    Minimum:           0.000
+    25th percentile:   0.100
+    Median:            0.204
+    75th percentile:   0.306
+    Maximum:           1.000
+
+Interpretation:
+
+    In 2023, the average risk is higher than the full-period average. The
+    distribution remains positively skewed, indicating that high-risk
+    municipalities are still a minority, but they stand out clearly from the
+    rest of the state.
+
+
+================================================================================
+4. RISK STRUCTURE AND MISMATCH
+================================================================================
+
+The mismatch indicator measures how unbalanced the three main dimensions are
+inside each municipality-year:
+
+    Hazard
+    Exposure
+    Vulnerability
+
+It is calculated as the standard deviation across the three subindices.
+
+High mismatch means that one or two dimensions are relatively high while another
+dimension is low. Because the final Climate Risk Index has a multiplicative
+structure, this imbalance can compress the final aggregate risk score.
+
+
+4.1 Full panel, 2002-2023
+-------------------------
+
+Mismatch statistics:
+
+    Mean mismatch:             0.201
+    Standard deviation:        0.083
+    75th percentile threshold: 0.261
+    High-mismatch share:       25.0%
+
+
+4.2 Latest year, 2023
+---------------------
+
+Mismatch statistics:
+
+    Mean mismatch:             0.182
+    Standard deviation:        0.077
+    75th percentile threshold: 0.244
+    High-mismatch share:       25.1%
+
+
+Interpretation:
+
+    About one quarter of the municipalities are classified as high mismatch by
+    construction, because the threshold is the 75th percentile.
+
+    The substantive interpretation is that many municipalities may have latent
+    climate-industrial risk. For example, a municipality can have high hazard or
+    vulnerability but low industrial exposure, which reduces the final aggregate
+    risk score.
+
+    This is important for policy interpretation: a low final index does not
+    always mean the absence of climate pressure. It can also mean that the three
+    dimensions are not simultaneously high.
+
+
+================================================================================
+5. CORRELATION BETWEEN SUBINDICES
+================================================================================
+
+5.1 Full panel, 2002-2023
+-------------------------
+
+Correlation matrix:
+
+    Hazard x Exposure:        -0.290
+    Hazard x Vulnerability:   -0.101
+    Exposure x Vulnerability: -0.197
+
+Interpretation:
+
+    The correlations between subindices are negative. This suggests that the
+    three dimensions are not simply moving together.
+
+    The strongest relationship is between Hazard and Exposure (-0.290). This
+    means municipalities with higher industrial exposure are not necessarily the
+    same municipalities with higher normalized hazard levels.
+
+    This supports the need for a multidimensional index. Hazard alone, exposure
+    alone or vulnerability alone would not capture the full structure of risk.
+
+
+5.2 Latest year, 2023
+---------------------
+
+Correlation matrix:
+
+    Hazard x Exposure:        -0.245
+    Hazard x Vulnerability:   -0.018
+    Exposure x Vulnerability: -0.203
+
+Interpretation:
+
+    In 2023, Hazard and Vulnerability are almost uncorrelated. Exposure and
+    Vulnerability remain moderately negative, and Hazard and Exposure also remain
+    negative.
+
+    This reinforces the interpretation that climate pressure, industrial
+    exposure and socioeconomic vulnerability are distinct dimensions. Their
+    combination is analytically more informative than any single component.
+
+
+================================================================================
+6. CORRELATION BETWEEN INTERNAL VARIABLES
+================================================================================
+
+Variables analyzed:
+
+    Hazard variables:
+        - Deficit hidrico
+        - Variabilidade da precipitacao
+        - Variabilidade do vento
+        - Amplitude termica
+
+    Exposure variables:
+        - Empregos industriais per capita
+        - Empresas industriais per capita
+
+    Vulnerability variables:
+        - Intensidade energetica
+        - Sensibilidade da producao agricola
+        - Resiliencia da renda
+
+
+6.1 Strongest correlations, full panel 2002-2023
+------------------------------------------------
+
+Top absolute correlations:
+
+    Variabilidade do vento x Amplitude termica:                 -0.674
+    Empregos industriais per capita x Empresas industriais pc:    0.608
+    Empregos industriais pc x Intensidade energetica:             0.433
+    Empregos industriais pc x Resiliencia da renda:              -0.339
+    Deficit hidrico x Amplitude termica:                          0.310
+    Empregos industriais pc x Sensibilidade agricola:            -0.302
+    Intensidade energetica x Resiliencia da renda:               -0.301
+    Empresas industriais pc x Sensibilidade agricola:            -0.275
+    Variabilidade da precipitacao x Variabilidade do vento:      -0.275
+    Amplitude termica x Empresas industriais pc:                 -0.227
+
+
+Interpretation:
+
+    The strongest structural relationship is climatic:
+
+        wind variability and thermal amplitude are strongly negatively related.
+
+    The second strongest relationship is economic:
+
+        industrial jobs per capita and industrial firms per capita are strongly
+        positively correlated.
+
+    This is expected and validates the exposure structure: municipalities with
+    more industrial firms per capita also tend to have more industrial jobs per
+    capita.
+
+    Energy intensity is positively associated with industrial employment per
+    capita, suggesting that more industrialized municipalities tend to show
+    higher electricity-consumption vulnerability.
+
+    Industrial employment is negatively associated with agricultural sensitivity
+    and income-resilience vulnerability. This suggests that more industrial
+    municipalities are generally less dependent on agriculture and tend to have
+    stronger income resilience.
+
+
+6.2 Strongest correlations, 2023
+--------------------------------
+
+Top absolute correlations:
+
+    Empregos industriais pc x Empresas industriais pc:            0.596
+    Empregos industriais pc x Intensidade energetica:             0.493
+    Empregos industriais pc x Resiliencia da renda:              -0.433
+    Intensidade energetica x Resiliencia da renda:               -0.375
+    Variabilidade do vento x Amplitude termica:                  -0.356
+    Deficit hidrico x Variabilidade do vento:                     0.354
+    Variabilidade da precipitacao x Variabilidade do vento:      -0.340
+    Deficit hidrico x Amplitude termica:                         -0.255
+    Empresas industriais pc x Sensibilidade agricola:            -0.255
+    Empregos industriais pc x Sensibilidade agricola:            -0.245
+
+
+Interpretation:
+
+    In 2023, the most important relationships are more clearly economic than in
+    the full panel:
+
+        industrial jobs, industrial firms and energy intensity are closely
+        related.
+
+    The negative association between industrial employment and income-resilience
+    vulnerability is stronger in 2023 than in the full panel. This suggests that
+    municipalities with stronger industrial labor structure tend to be more
+    economically resilient in the vulnerability component.
+
+
+================================================================================
+7. MAIN ANALYTICAL TAKEAWAYS
+================================================================================
+
+1. Risk is concentrated, not evenly distributed.
+
+    The Climate Risk Index has positive skewness in both the full panel and in
+    2023. Most municipalities have lower risk, while a smaller group has
+    substantially higher risk.
+
+
+2. The index is multidimensional by necessity.
+
+    Hazard, Exposure and Vulnerability are weakly to moderately negatively
+    correlated. They do not measure the same thing. This supports the index
+    design.
+
+
+3. Mismatch matters.
+
+    A municipality can have high pressure in one dimension and low pressure in
+    another. Because the final index is multiplicative, this can reduce the final
+    score even when one dimension is concerning.
+
+
+4. Industrial exposure behaves consistently.
+
+    Industrial jobs per capita and industrial firms per capita are strongly
+    positively correlated, which supports the internal consistency of the
+    Exposure subindex.
+
+
+5. Vulnerability has an economic structure.
+
+    Energy intensity is positively related to industrial employment, while
+    agricultural sensitivity and income-resilience vulnerability tend to be lower
+    in more industrial municipalities.
+
+
+6. Correlations do not imply causality.
+
+    These statistics describe association patterns in the index inputs. They do
+    not prove causal relationships between climate variables, industrial
+    structure and vulnerability.
+
+
+================================================================================
+8. WHY THIS REPORT IS INTERNAL
+================================================================================
+
+These findings are useful for validating the index and understanding its
+structure, but they are more technical than the main public dashboard story.
+
+The public dashboard now focuses on:
+
+    - municipal ranking and map;
+    - detailed municipal decomposition;
+    - economic impact interpretation.
+
+This report keeps the statistical diagnostics available for internal review,
+methodological defense and future documentation.
+

@@ -3,12 +3,14 @@
 # ============================================
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import geopandas as gpd
 import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 import unicodedata
+import uuid
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import numpy as np
@@ -343,6 +345,32 @@ def impact_card(title, value, subtitle, color="#4292c6"):
         <div style="font-size:12px; color:#d1d5db; margin-top:8px; line-height:1.35;">{subtitle}</div>
     </div>
     """, unsafe_allow_html=True)
+
+def animated_plotly_chart(fig, height=420, frame_duration=70, transition_duration=35):
+    plot_id = f"plotly_{uuid.uuid4().hex}"
+    html = fig.to_html(
+        include_plotlyjs="cdn",
+        full_html=False,
+        auto_play=False,
+        div_id=plot_id,
+        config={"responsive": True, "displayModeBar": False}
+    )
+    html += f"""
+    <script>
+    setTimeout(function() {{
+        var plot = document.getElementById("{plot_id}");
+        if (plot && plot._transitionData && plot._transitionData._frames.length > 0) {{
+            Plotly.animate(plot, null, {{
+                frame: {{duration: {frame_duration}, redraw: true}},
+                transition: {{duration: {transition_duration}}},
+                fromcurrent: false,
+                mode: "immediate"
+            }});
+        }}
+    }}, 120);
+    </script>
+    """
+    components.html(html, height=height)
 
 # =========================
 # PATHS (COMPATÍVEL COM STREAMLIT CLOUD)
@@ -744,7 +772,7 @@ com destaque para **{main_variable}** como principal componente explicativo dent
 # TABS - NEW STRUCTURE
 # =========================
 
-tab0, tab1, tab2 = st.tabs(["Analysis","Economic Impact", "Statistical Insights"])
+tab0, tab1 = st.tabs(["Analysis", "Economic Impact"])
 
 # =========================================================
 # TAB 0 - ANALYSIS (Ranking + Map + Analysis)
@@ -1607,13 +1635,7 @@ with tab1:
                 industrial_spillover = econ_row["estimated_industrial_indirect_impact_brl"]
 
                 st.markdown(f"""
-                <div style="
-                    background-color:#0f172a;
-                    border-radius:8px;
-                    padding:18px 20px;
-                    margin:8px 0 16px 0;
-                    border-left:4px solid #4292c6;
-                ">
+                <div style="margin:8px 0 16px 0;">
                     <div style="color:#9ca3af; font-size:12px; text-transform:uppercase; letter-spacing:0.06em;">
                         Resumo do impacto econômico
                     </div>
@@ -1622,7 +1644,8 @@ with tab1:
                     </div>
                     <div style="color:#d1d5db; font-size:14px; margin-top:8px; line-height:1.45;">
                         Valores estimados representam efeitos associados pelos modelos de painel com efeitos fixos,
-                        não prova causal direta. Dados econômicos disponíveis até 2021.
+                        não prova causal direta. Os valores monetários são estimativas de comunicação derivadas
+                        dos efeitos percentuais do modelo e das bases econômicas locais. Dados econômicos disponíveis até 2021.
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1682,33 +1705,76 @@ with tab1:
                     impact_channels["Percentual Label"] = impact_channels["Percentual"].apply(
                         lambda value: "-" if pd.isna(value) else f"{value:+.3f} pp"
                     )
+                    impact_chart_values = impact_channels["Impacto (R$)"].dropna()
+                    impact_chart_min = min(0, impact_chart_values.min()) if not impact_chart_values.empty else -1
+                    impact_chart_max = max(0, impact_chart_values.max()) if not impact_chart_values.empty else 1
+                    impact_chart_padding = max((impact_chart_max - impact_chart_min) * 0.15, 1)
 
-                    fig_impacts = px.bar(
-                        impact_channels,
-                        x="Canal",
-                        y="Impacto (R$)",
-                        color="Canal",
-                        color_discrete_sequence=["#fb923c", "#4292c6", "#38bdf8"],
-                        custom_data=["Percentual Label"]
-                    )
-                    fig_impacts.update_traces(
-                        hovertemplate="%{x}<br>Impacto: R$ %{y:,.0f}<br>Efeito: %{customdata[0]}<extra></extra>"
+                    channel_colors = ["#fb923c", "#4292c6", "#38bdf8"]
+                    animation_steps = np.linspace(0, 1, 9)
+                    fig_impacts = go.Figure(
+                        data=[
+                            go.Bar(
+                                x=impact_channels["Canal"],
+                                y=impact_channels["Impacto (R$)"],
+                                marker_color=channel_colors,
+                                customdata=impact_channels["Percentual Label"],
+                                hovertemplate="%{x}<br>Impacto: R$ %{y:,.0f}<br>Efeito: %{customdata}<extra></extra>"
+                            )
+                        ],
+                        frames=[
+                            go.Frame(
+                                data=[
+                                    go.Bar(
+                                        x=impact_channels["Canal"],
+                                        y=impact_channels["Impacto (R$)"] * step,
+                                        marker_color=channel_colors,
+                                        customdata=impact_channels["Percentual Label"],
+                                        hovertemplate="%{x}<br>Impacto: R$ %{y:,.0f}<br>Efeito: %{customdata}<extra></extra>"
+                                    )
+                                ],
+                                name=f"{step:.2f}"
+                            )
+                            for step in animation_steps
+                        ]
                     )
                     fig_impacts.update_layout(
-                        height=360,
+                        height=385,
                         showlegend=False,
                         paper_bgcolor="rgba(0,0,0,0)",
                         plot_bgcolor="rgba(0,0,0,0)",
-                        margin=dict(l=0, r=0, t=20, b=0),
+                        margin=dict(l=90, r=20, t=10, b=82),
                         font=dict(color="white"),
-                        xaxis=dict(title="", tickfont=dict(color="white")),
+                        xaxis=dict(
+                            title="",
+                            tickfont=dict(color="white"),
+                            showticklabels=True,
+                            showline=True,
+                            showgrid=False,
+                            linecolor="white",
+                            ticks="outside",
+                            tickcolor="white",
+                            automargin=True
+                        ),
                         yaxis=dict(
                             title="Impacto estimado (R$)",
                             title_font=dict(color="white"),
-                            tickfont=dict(color="white")
+                            title_standoff=34,
+                            tickfont=dict(color="white"),
+                            showticklabels=True,
+                            showline=True,
+                            showgrid=False,
+                            linecolor="white",
+                            ticks="outside",
+                            tickcolor="white",
+                            automargin=True,
+                            range=[
+                                impact_chart_min - impact_chart_padding,
+                                impact_chart_max + impact_chart_padding
+                            ]
                         )
                     )
-                    st.plotly_chart(fig_impacts, use_container_width=True)
+                    animated_plotly_chart(fig_impacts, height=415, frame_duration=115, transition_duration=60)
 
                 with text_col:
                     direction_text = "aumentou" if pd.notna(risk_change) and risk_change > 0 else "diminuiu"
@@ -1725,7 +1791,6 @@ with tab1:
                         font-size:14px;
                         line-height:1.55;
                     ">
-                        <b>Leitura executiva</b><br><br>
                         Entre {previous_year if previous_year else "-"} e {econ_year}, o índice de risco climático
                         {direction_text} <b>{format_index_delta(risk_change)}</b> em {econ_municipio}.
                         Pelos modelos estimados, essa mudança está associada a uma {gdp_direction} de
@@ -1738,427 +1803,202 @@ with tab1:
                     </div>
                     """, unsafe_allow_html=True)
 
-                st.markdown("**Serie temporal**")
+                st.markdown("<div style='margin-top:-12px; margin-bottom:-12px; color:white;'><b>Progressão das Estimativas do Modelo</b></div>", unsafe_allow_html=True)
                 mun_series = df_econ[df_econ["municipio_nome"] == econ_municipio].copy()
-                mun_series["risk_change_label"] = mun_series["risk_change"].apply(
+                mun_series = mun_series.sort_values("ano")
+                mun_story = mun_series[(mun_series["ano"] >= 2003) & (mun_series["ano"] <= econ_year)].copy()
+                mun_story["risk_change_label"] = mun_story["risk_change"].apply(
                     lambda value: "-" if pd.isna(value) else f"{value:+.3f}"
                 )
+                story_years = mun_story["ano"].dropna().astype(int).tolist()
+                risk_values = mun_story["risk_change"].dropna()
+                impact_values = mun_story["estimated_gdp_risk_impact_brl"].dropna()
+                risk_min = min(0, risk_values.min()) if not risk_values.empty else -0.1
+                risk_max = max(0, risk_values.max()) if not risk_values.empty else 0.1
+                risk_padding = max((risk_max - risk_min) * 0.15, 0.01)
+                impact_min = min(0, impact_values.min()) if not impact_values.empty else -1
+                impact_max = max(0, impact_values.max()) if not impact_values.empty else 1
+                impact_padding = max((impact_max - impact_min) * 0.15, 1)
+
                 fig_series = go.Figure()
                 fig_series.add_trace(go.Scatter(
-                    x=mun_series["ano"],
-                    y=mun_series["risk_change"],
-                    customdata=mun_series["risk_change_label"],
+                    x=mun_story["ano"],
+                    y=mun_story["risk_change"],
+                    customdata=mun_story["risk_change_label"],
                     mode="lines+markers",
                     name="Mudança no risco",
                     line=dict(color="#38bdf8", width=3),
                     hovertemplate="Ano: %{x}<br>Mudança no risco: %{customdata}<extra></extra>"
                 ))
                 fig_series.add_trace(go.Bar(
-                    x=mun_series["ano"],
-                    y=mun_series["estimated_gdp_risk_impact_brl"],
+                    x=mun_story["ano"],
+                    y=mun_story["estimated_gdp_risk_impact_brl"],
                     name="Impacto associado no PIB (R$)",
                     marker_color="#fb923c",
                     opacity=0.65,
                     yaxis="y2",
                     hovertemplate="Ano: %{x}<br>Impacto PIB: R$ %{y:,.0f}<extra></extra>"
                 ))
+                fig_series.frames = [
+                    go.Frame(
+                        data=[
+                            go.Scatter(
+                                x=mun_story[mun_story["ano"] <= year]["ano"],
+                                y=mun_story[mun_story["ano"] <= year]["risk_change"],
+                                customdata=mun_story[mun_story["ano"] <= year]["risk_change_label"],
+                                mode="lines+markers",
+                                line=dict(color="#38bdf8", width=3),
+                                hovertemplate="Ano: %{x}<br>Mudança no risco: %{customdata}<extra></extra>"
+                            ),
+                            go.Bar(
+                                x=mun_story[mun_story["ano"] <= year]["ano"],
+                                y=mun_story[mun_story["ano"] <= year]["estimated_gdp_risk_impact_brl"],
+                                marker_color="#fb923c",
+                                opacity=0.65,
+                                yaxis="y2",
+                                hovertemplate="Ano: %{x}<br>Impacto PIB: R$ %{y:,.0f}<extra></extra>"
+                            )
+                        ],
+                        name=str(year)
+                    )
+                    for year in story_years
+                ]
                 fig_series.update_layout(
-                    height=360,
+                    height=335,
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
-                    margin=dict(l=0, r=0, t=20, b=0),
+                    margin=dict(l=90, r=95, t=6, b=34),
                     font=dict(color="white"),
                     legend=dict(orientation="h", y=1.08, x=0, font=dict(color="white")),
-                    xaxis=dict(title="", tickfont=dict(color="white")),
+                    xaxis=dict(
+                        title="",
+                        tickfont=dict(color="white"),
+                        showticklabels=True,
+                        showline=True,
+                        linecolor="white",
+                        showgrid=False,
+                        ticks="outside",
+                        tickcolor="white",
+                        range=[
+                            (min(story_years) - 0.5) if story_years else 2002.5,
+                            (max(story_years) + 0.5) if story_years else 2021.5
+                        ],
+                        dtick=1
+                    ),
                     yaxis=dict(
                         title="Mudança no risco",
                         title_font=dict(color="white"),
+                        title_standoff=34,
                         tickfont=dict(color="white"),
-                        tickformat=".3f"
+                        tickformat=".3f",
+                        showticklabels=True,
+                        showline=True,
+                        linecolor="white",
+                        showgrid=False,
+                        zeroline=False,
+                        ticks="outside",
+                        tickcolor="white",
+                        automargin=True,
+                        range=[risk_min - risk_padding, risk_max + risk_padding]
                     ),
                     yaxis2=dict(
                         title="Impacto PIB (R$)",
                         title_font=dict(color="white"),
+                        title_standoff=34,
                         overlaying="y",
                         side="right",
-                        tickfont=dict(color="white")
+                        tickfont=dict(color="white"),
+                        showticklabels=True,
+                        showline=True,
+                        linecolor="white",
+                        showgrid=False,
+                        zeroline=False,
+                        ticks="outside",
+                        tickcolor="white",
+                        automargin=True,
+                        range=[impact_min - impact_padding, impact_max + impact_padding]
                     )
                 )
-                st.plotly_chart(fig_series, use_container_width=True)
+                animated_plotly_chart(fig_series, height=390, frame_duration=190, transition_duration=90)
 
-                st.markdown("**Largest model-associated GDP impacts in selected year**")
-                top_losses = econ_year_df.dropna(subset=["estimated_gdp_risk_impact_brl"]).copy()
-                top_losses["Impacto PIB"] = top_losses["estimated_gdp_risk_impact_brl"].apply(format_brl)
-                top_losses["Mudança no Risco"] = top_losses["risk_change"].apply(format_index_delta)
-                top_losses["Município"] = top_losses["municipio_nome"]
-                top_losses["Efeito no Crescimento"] = top_losses["gdp_risk_percent_points"].apply(format_pp)
-                top_display = top_losses.sort_values("estimated_gdp_risk_impact_brl").head(10)[
-                    ["Município", "Mudança no Risco", "Efeito no Crescimento", "Impacto PIB"]
-                ]
-                st.dataframe(top_display, use_container_width=True, hide_index=True)
+                model_col1, model_col2 = st.columns(2)
 
-# =========================================================
-# TAB 2 - STATISTICAL INSIGHTS 
-# =========================================================
+                with model_col1:
+                    st.markdown("""
+                    <div style="
+                        background-color:#111827;
+                        border-left:4px solid #fb923c;
+                        border-radius:8px;
+                        padding:16px 18px;
+                        min-height:185px;
+                        color:#e5e7eb;
+                        font-size:14px;
+                        line-height:1.5;
+                    ">
+                        <div style="color:white; font-size:16px; font-weight:700; margin-bottom:8px;">
+                            Modelo 1: PIB municipal
+                        </div>
+                        <div style="color:#d1d5db; margin-bottom:10px;">
+                            Estima como a mudança no risco climático industrial está associada ao crescimento do PIB real municipal.
+                        </div>
+                        <div style="font-family:monospace; color:#fbbf24; font-size:13px; line-height:1.45;">
+                            Δlog(PIB real)<sub>it</sub> = β·Risco sem PIB<sub>i,t-1</sub><br>
+                            + γ·Δlog(VA industrial)<sub>it</sub><br>
+                            + FE município + FE ano
+                        </div>
+                        <div style="color:#9ca3af; margin-top:10px; font-size:12px;">
+                            Controle: crescimento do Valor Adicionado Industrial. O risco entra defasado em um ano.
+                            <br>
+                            Erros-padrão clusterizados por município.
+                        </div>
+                        <div style="color:#e5e7eb; margin-top:12px; font-size:13px;">
+                            <b>Coeficiente do risco:</b> -0.056<br>
+                            <b>p-value:</b> 0.035
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-with tab2:
+                with model_col2:
+                    st.markdown("""
+                    <div style="
+                        background-color:#111827;
+                        border-left:4px solid #4292c6;
+                        border-radius:8px;
+                        padding:16px 18px;
+                        min-height:185px;
+                        color:#e5e7eb;
+                        font-size:14px;
+                        line-height:1.5;
+                    ">
+                        <div style="color:white; font-size:16px; font-weight:700; margin-bottom:8px;">
+                            Modelo 2: Canal agropecuário
+                        </div>
+                        <div style="color:#d1d5db; margin-bottom:10px;">
+                            Testa se o risco climático aparece primeiro na produção agropecuária, como possível canal de transmissão.
+                        </div>
+                        <div style="font-family:monospace; color:#93c5fd; font-size:13px; line-height:1.45;">
+                            Δlog(VA agro)<sub>it</sub> = β·Risco sem PIB<sub>i,t-1</sub><br>
+                            + FE município + FE ano
+                        </div>
+                        <div style="color:#9ca3af; margin-top:10px; font-size:12px;">
+                            Sem controles adicionais, para observar diretamente a associação entre risco climático e crescimento agropecuário.
+                            <br>
+                            Erros-padrão clusterizados por município.
+                        </div>
+                        <div style="color:#e5e7eb; margin-top:12px; font-size:13px;">
+                            <b>Coeficiente do risco:</b> -0.374<br>
+                            <b>p-value:</b> 0.000003
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-    # DISTRIBUIÇÃO DO RISCO
-    st.markdown("**Distribuição do Risco Climático**")
-    col_chart, col_text = st.columns([1.2, 1])
-
-    with col_chart:
-
-        fig_dist = px.histogram(
-            df,
-            x="risk_norm",
-            nbins=30,
-            opacity=0.85
-        )
-
-        fig_dist.update_traces(
-            hovertemplate=
-            "Índice de Risco Climático (faixa): %{x:.3f}<br>" +
-            "Municípios: %{y}<extra></extra>"
-        )
-
-        fig_dist.update_layout(
-            height=300,
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(l=0, r=0, t=0, b=0),
-            font=dict(color="white"),
-            xaxis=dict(
-                title="Índice de Risco Climático",
-                title_font=dict(color="white"),
-                tickfont=dict(color="white")
-            ),
-            yaxis=dict(
-                title="Número de Municípios",
-                title_font=dict(color="white"),
-                tickfont=dict(color="white")
-            )
-        )
-
-        st.plotly_chart(fig_dist, use_container_width=True)
-
-        # MÉTRICAS ESTATÍSTICAS
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric("Média", round(df["risk_norm"].mean(), 3))
-        col2.metric("Desvio Padrão", round(df["risk_norm"].std(), 3))
-        col3.metric("Assimetria", round(df["risk_norm"].skew(), 3))
-
-        # INTERPRETAÇÃO
-        mean = df["risk_norm"].mean()
-        std = df["risk_norm"].std()
-        skew = df["risk_norm"].skew()
-    
-        # interpretação da assimetria
-        if skew > 0.5:
-            skew_text = "assimetria positiva, indicando concentração de municípios em níveis mais baixos de risco, com poucos municípios apresentando valores elevados"
-        elif skew < -0.5:
-            skew_text = "assimetria negativa, sugerindo concentração em níveis mais altos de risco"
-        else:
-            skew_text = "distribuição aproximadamente simétrica"
-
-        # interpretação da dispersão
-        if std > 0.15:
-            disp_text = "elevada heterogeneidade entre os municípios"
-        else:
-            disp_text = "baixa dispersão, indicando relativa homogeneidade entre os municípios"
-    
-    with col_text:
-        st.markdown(f"""
-        <div style="
-            background-color:#111827;
-            padding:18px;
-            border-radius:10px;
-            border-left:4px solid #38bdf8;
-            margin-top:15px;
-            color:#e5e7eb;
-            font-size:15px;
-            line-height:1.5;
-        "> 
-                             
-        A distribuição do risco climático industrial em Santa Catarina apresenta <b>{skew_text}</b>, 
-
-        Observa-se também <b>{disp_text}</b>
-
-        Esse padrão indica que o risco climático industrial tende a se concentrar em um conjunto restrito de municípios, enquanto a maior parte apresenta níveis reduzidos de risco relativo.
-        
-        """, unsafe_allow_html=True)
-    
-    # MISMATCH INDEX
-    st.markdown("**Estrutura do Risco (Mismatch)**")
-
-    # Cálculo do mismatch
-    df["mismatch_std"] = df[[
-        "hazard_index",
-        "exposure_index",
-        "vulnerability_index"
-    ]].std(axis=1)
-
-    # Threshold
-    threshold = df["mismatch_std"].quantile(0.75)
-
-    # Share
-    high_mismatch_share = (df["mismatch_std"] > threshold).mean()
-
-    col_chart, col_text = st.columns([1.2, 1])
-
-    with col_chart:
-
-        fig_mismatch = px.histogram(
-            df,
-            x="mismatch_std",
-            nbins=30,
-            opacity=0.85
-        )
-
-        fig_mismatch.update_traces(
-            hovertemplate=
-            "Desbalanceamento (faixa): %{x:.3f}<br>" +
-            "Municípios: %{y}<extra></extra>",
-            marker=dict(color="#60a5fa")
-        )
-
-        fig_mismatch.update_layout(
-            height=300,
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(l=0, r=0, t=0, b=0),
-            font=dict(color="white"),
-            xaxis=dict(
-                title="Desbalanceamento entre Hazard, Exposure e Vulnerability",
-                title_font=dict(color="white"),
-                tickfont=dict(color="white")
-            ),
-            yaxis=dict(
-                title="Número de Municípios",
-                title_font=dict(color="white"),
-                tickfont=dict(color="white")
-            )
-        )
-
-        st.plotly_chart(fig_mismatch, use_container_width=True)
-        
-        st.metric(
-            "% Municípios com Alto Mismatch",
-            f"{high_mismatch_share*100:.1f}%"
-        )
-
-    with col_text:
-
-        st.markdown(f"""
-        <div style="
-            background-color:#111827;
-            padding:18px;
-            border-radius:10px;
-            border-left:4px solid #fb923c;
-            margin-top:15px;
-            color:#e5e7eb;
-            font-size:15px;
-            line-height:1.5;
-        ">
-
-        O indicador de mismatch captura o desbalanceamento entre hazard, exposure e vulnerability.
-
-        Cerca de <b>{high_mismatch_share*100:.1f}%</b> dos municípios apresentam forte desbalanceamento entre essas dimensões, com uma elevada e outra muito reduzida.
-
-        Devido à estrutura multiplicativa do índice, isso tende a comprimir o risco climático industrial, mesmo na presença de pressões relevantes.
-
-        Isso sugere a existência de <b>risco climático latente</b>, especialmente em contextos de baixa exposição industrial.
-
-        """, unsafe_allow_html=True)
-
-    # =========================
-    # SECTION 2: ECONOMIC INSIGHTS (Correlations)
-    # =========================
-
-    st.markdown("**Correlação entre Subíndices**")
-
-    col1, col2 = st.columns([1.2, 1])
-
-    with col1:
-
-        # CORRELAÇÃO — SUBÍNDICES
-        corr_sub = df[[
-            "hazard_index",
-            "exposure_index",
-            "vulnerability_index",
-        ]].corr()
-
-        labels_sub = {
-            "hazard_index": "Hazard",
-            "exposure_index": "Exposure",
-            "vulnerability_index": "Vulnerability"
-        }
-
-        corr_sub = corr_sub.rename(index=labels_sub, columns=labels_sub)
-
-        fig_corr = px.imshow(
-            corr_sub,
-            text_auto=".3f",
-            aspect="auto"
-        )
-        fig_corr.update_traces(
-            hovertemplate=
-            "%{y} × %{x}<br>" +
-            "Correlação: %{z:.3f}<extra></extra>"
-        )
-
-        fig_corr.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color="white"),
-            margin=dict(l=0, r=0, t=30, b=0),
-            height=350,
-            xaxis=dict(tickfont=dict(color="white")),
-            yaxis=dict(tickfont=dict(color="white")),
-            
-        )
-
-        st.plotly_chart(fig_corr, use_container_width=True)
-
-    with col2:
-        # TEXTO INTERPRETATIVO
-
-        corr_no_diag = corr_sub.where(~np.eye(corr_sub.shape[0],dtype=bool))
-        
-        # Maior positiva
-        max_pos = corr_no_diag.unstack().idxmax()
-        val_pos = corr_no_diag.loc[max_pos[0], max_pos[1]]
-
-        # Maior negativa
-        max_neg = corr_no_diag.unstack().idxmin()
-        val_neg = corr_no_diag.loc[max_neg[0], max_neg[1]]
-
-        st.markdown(f"""
-        <div style="
-            background-color:#111827;
-            padding:18px;
-            border-radius:10px;
-            border-left:4px solid #38bdf8;
-            margin-top:15px;
-            color:#e5e7eb;
-            font-size:15px;
-            line-height:1.5;
-        ">
-
-        A relação inversa mais intensa entre <b>{max_neg[0]}</b> e <b>{max_neg[1]}</b> 
-        (correlação = {val_neg:.3f}), sugere que municípios com maior intensidade em uma dessas dimensões 
-        tendem a apresentar níveis mais baixos na outra.
-
-        Do ponto de vista analítico, essa relação não implica causalidade direta, 
-        mas sugere que esses componentes podem estar associados a características econômicas ou territoriais comuns.
-
-
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("**Correlação entre Variáveis Estruturais**")
-    col1, col2 = st.columns([1.2, 1], gap="small")
-    with col1:
-        # CORRELAÇÃO — VARIÁVEIS INTERNAS
-
-        vars_cols = [
-            # Hazard
-            "def_mean_norm", "ppt_std_norm", "ws_std_norm", "dtr_mean_norm",
-            # Exposure
-            "empregos_pc_norm", "empresas_pc_norm",
-            # Vulnerability
-            "energia_pc_norm", "agro_pc_norm", "pib_pc_inv"
-        ]
-
-        corr_vars = df[vars_cols].corr()
-
-        # Labels amigáveis
-        labels_vars = {
-            "def_mean_norm": "Déficit hídrico",
-            "ppt_std_norm": "Variabilidade da precipitação",
-            "ws_std_norm": "Variabilidade do vento",
-            "dtr_mean_norm": "Amplitude térmica",
-            "empregos_pc_norm": "Empregos industriais per capita",
-            "empresas_pc_norm": "Empresas industriais per capita",
-            "energia_pc_norm": "Intensidade energética",
-            "agro_pc_norm": "Sensibilidade da produção agrícola",
-            "pib_pc_inv": "Resiliência da renda"
-        }
-
-        corr_vars = corr_vars.rename(index=labels_vars, columns=labels_vars)
-
-        fig_corr2 = px.imshow(
-            corr_vars,
-            text_auto=False,
-            aspect="auto",
-            color_continuous_scale=[
-                (0.0, "#08306b"),
-                (0.5, "#f7f7f7"),
-                (1.0, "#08306b")
-            ],
-            zmin=-1,
-            zmax=1
-        )
-        fig_corr2.update_traces(
-            hovertemplate=
-            "%{y} × %{x}<br>" +
-            "Correlação: %{z:.3f}<extra></extra>"
-        )
-
-        fig_corr2.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color="white"),
-            margin=dict(l=0, r=0, t=80, b=0, pad=0), 
-            height=400,
-
-            xaxis=dict(
-                tickfont=dict(color="white"),
-                constrain="domain"),
-            yaxis=dict(tickfont=dict(color="white"),
-                constrain="domain"),
-
-            coloraxis_colorbar=dict(
-                orientation="h",
-                x=0.5,
-                xanchor="center",
-                y=1,          
-                len=1.2,
-                thickness=12,
-                tickfont=dict(color="white", size=11)
-            )
-        )
-        fig_corr2.update_xaxes(
-            tickangle=40,   # ou 30 no máximo
-            tickfont=dict(size=10)
-        )
-        st.plotly_chart(fig_corr2, use_container_width=True)
-   
-    with col2:
-        # INSIGHT AVANÇADO
-        st.markdown(f"""
-        <div style="
-            background-color:#111827;
-            padding:18px;
-            border-radius:10px;
-            border-left:4px solid #fb923c;
-            margin-top:15px;
-            color:#e5e7eb;
-            font-size:15px;
-            line-height:1.5;
-        ">
-
-        A estrutura de correlação evidencia como os determinantes do risco interagem entre si.  
-
-        Relações mais fortes sugerem maior associação entre fatores climáticos e econômicos, 
-        enquanto correlações mais baixas indicam maior autonomia entre as dimensões.
-
-        Do ponto de vista analítico, isso reforça a necessidade de abordagens multidimensionais 
-        na avaliação do risco climático industrial.
-
-        </div>
-        """, unsafe_allow_html=True)
+                st.markdown("""
+                <p style="color:#e5e7eb; font-size:15px; line-height:1.55; margin-top:14px;">
+                    O Índice de Risco Climático é economicamente relevante. Quando o índice aumenta,
+                    o crescimento do PIB municipal no ano seguinte tende a ser menor, e o canal agropecuário
+                    aparece como um dos mecanismos de transmissão mais fortes.
+                </p>
+                """, unsafe_allow_html=True)
 
 # =======================
 # RODAPÉ
