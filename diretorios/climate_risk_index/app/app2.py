@@ -925,7 +925,6 @@ with tab0:
             font-size:15px;
             line-height:1.5;
         ">
-        <b>Interpretação dos Dados</b><br><br>
         Municípios de maior risco combinam níveis elevados de hazard climático, alta exposição da atividade industrial e maior vulnerabilidade.
         
         Já municípios de menor risco apresentam menor suscetibilidade a impactos climáticos, seja por menor exposição, melhores condições estruturais ou menor intensidade de eventos climáticos. 
