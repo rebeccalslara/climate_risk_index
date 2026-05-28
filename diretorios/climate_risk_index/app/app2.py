@@ -15,7 +15,7 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import numpy as np
 
-APP_FONT = "Inter"
+APP_FONT = "Inter, Arial, sans-serif"
 
 # =========================
 # CONFIG
@@ -28,16 +28,34 @@ st.set_page_config(
 )
 st.markdown("""
 <style>
-[data-testid="stImage"] img {
-    height: 120px;
+.top-stripes-header {
+    width: calc(100% + 3rem);
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    margin-top: -0.75rem;
+    margin-bottom: 0.8rem;
+}
+
+.top-stripes-header img {
+    width: 100%;
+    height: 96px;
     object-fit: cover;
+    display: block;
+    border-radius: 0;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.image(
-    "https://upload.wikimedia.org/wikipedia/commons/b/b2/20181204_Warming_stripes_%28global%2C_WMO%2C_1850-2018%29_-_Climate_Lab_Book_%28Ed_Hawkins%29.svg",
-    use_container_width=True
+st.markdown(
+    """
+    <div class="top-stripes-header">
+        <img
+            src="https://upload.wikimedia.org/wikipedia/commons/b/b2/20181204_Warming_stripes_%28global%2C_WMO%2C_1850-2018%29_-_Climate_Lab_Book_%28Ed_Hawkins%29.svg"
+            alt="Climate warming stripes header"
+        >
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
 # =========================
@@ -48,14 +66,25 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700&display=swap');
 
-html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"],
+html, body, body *, .stApp, .stApp *, [data-testid="stAppViewContainer"],
+[data-testid="stSidebar"], [data-testid="stSidebar"] *,
 [data-testid="stMarkdownContainer"], [data-testid="stMarkdownContainer"] *,
+[data-testid="stMetric"], [data-testid="stMetric"] *,
+[data-testid="stAlert"], [data-testid="stAlert"] *,
+[data-testid="stTabs"], [data-testid="stTabs"] *,
+[role="tab"], [role="tab"] *,
+[role="listbox"], [role="listbox"] *,
+[role="option"], [role="option"] *,
 button, input, textarea, select, label {
     font-family: 'Inter', Arial, sans-serif !important;
 }
 
-span[class*="material"], [data-testid="stIconMaterial"] {
+span[class*="material"], [data-testid="stIconMaterial"], .material-symbols-rounded {
     font-family: 'Material Symbols Rounded' !important;
+}
+
+[style*="monospace"], code, pre, kbd, samp {
+    font-family: monospace !important;
 }
 
 /* FUNDO */
@@ -73,6 +102,36 @@ span[class*="material"], [data-testid="stIconMaterial"] {
 
 [data-testid="stSidebar"] * {
     color: white !important;
+}
+
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div,
+[data-testid="stSidebar"] button,
+[data-testid="stSidebar"] input {
+    font-size: 12px !important;
+}
+
+[data-testid="stAlert"], [data-testid="stAlert"] * {
+    font-family: 'Inter', Arial, sans-serif !important;
+    font-size: 11px !important;
+}
+
+[data-testid="stMetric"],
+[data-testid="stMetric"] *,
+[data-testid="stMetricLabel"],
+[data-testid="stMetricLabel"] *,
+[data-testid="stMetricValue"],
+[data-testid="stMetricValue"] *,
+[data-testid="stMetricDelta"],
+[data-testid="stMetricDelta"] * {
+    font-family: 'Inter', Arial, sans-serif !important;
+}
+
+[data-testid="stMetricValue"],
+[data-testid="stMetricValue"] * {
+    font-size: 27px !important;
 }
 
 /* ABOUT BUTTON STYLING */
@@ -112,11 +171,26 @@ span[class*="material"], [data-testid="stIconMaterial"] {
 
 ul[role="listbox"] {
     background-color: #101010 !important;
+    font-family: 'Inter', Arial, sans-serif !important;
+    font-size: 12px !important;
 }
 
 li[role="option"] {
     background-color: #101010 !important;
     color: white !important;
+    font-family: 'Inter', Arial, sans-serif !important;
+    font-size: 12px !important;
+}
+
+li[role="option"] *,
+div[role="option"],
+div[role="option"] *,
+[data-baseweb="popover"],
+[data-baseweb="popover"] *,
+[data-baseweb="menu"],
+[data-baseweb="menu"] * {
+    font-family: 'Inter', Arial, sans-serif !important;
+    font-size: 12px !important;
 }
 
 li[role="option"]:hover {
@@ -166,7 +240,7 @@ h1, h2, h3 {
 
 .main-project-title {
     color: white;
-    font-family: 'Orbitron', 'Arial Black', sans-serif;
+    font-family: 'Orbitron', 'Arial Black', sans-serif !important;
     font-size: 32px;
     font-weight: 600;
     line-height: 1.22;
@@ -176,11 +250,18 @@ h1, h2, h3 {
 
 .app-section-title {
     color: white;
-    font-family: 'Inter', Arial, sans-serif;
+    font-family: 'Inter', Arial, sans-serif !important;
     font-size: 22px;
     font-weight: 700;
     line-height: 1.25;
     margin: 0.2rem 0 0.9rem 0;
+}
+
+.app-section-title .selected-title-municipality {
+    color: #4292c6;
+    font-family: 'Inter', Arial, sans-serif !important;
+    font-size: inherit;
+    font-weight: inherit;
 }
 
 /* REMOVE TOPO */
@@ -251,11 +332,67 @@ header {
 }
 
 .mun-header {
-    font-family: 'Inter', Arial, sans-serif;
+    font-family: 'Inter', Arial, sans-serif !important;
     font-size: 30px;
     font-weight: 600;
     color: #4292c6;
     padding-top: 10px;
+}
+
+.subindex-label {
+    color: white;
+    font-family: 'Inter', Arial, sans-serif !important;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+}
+
+[data-testid="stMarkdownContainer"] .mun-header {
+    font-family: 'Inter', Arial, sans-serif !important;
+}
+
+[data-testid="stMarkdownContainer"] .mun-header,
+[data-testid="stMarkdownContainer"] .mun-header * {
+    font-family: 'Inter', Arial, sans-serif !important;
+}
+
+.selected-municipality-title,
+[data-testid="stMarkdownContainer"] .selected-municipality-title {
+    display: block;
+    color: #4292c6;
+    font-family: 'Inter', Arial, sans-serif !important;
+    font-size: 28px;
+    font-weight: 600;
+    font-style: normal;
+    line-height: 1.2;
+    letter-spacing: 0;
+    padding-top: 10px;
+}
+
+.about-panel,
+.about-panel * {
+    font-family: 'Inter', Arial, sans-serif !important;
+}
+
+.about-panel h2 {
+    font-size: 21px !important;
+}
+
+.about-panel h3 {
+    font-size: 17px !important;
+}
+
+.about-panel h4 {
+    font-size: 13px !important;
+}
+
+.about-panel p,
+.about-panel blockquote {
+    font-size: 13px !important;
+}
+
+.about-formula {
+    font-size: 17px !important;
 }
 
 .kpi-square-container {
@@ -278,13 +415,13 @@ header {
 }
 
 .kpi-square-title {
-    font-size: 12px;
+    font-size: 11px;
     color: #9ca3af;
     margin-bottom: 8px;
 }
 
 .kpi-square-value {
-    font-size: 20px;
+    font-size: 17px !important;
     color: white;
     font-weight: 600;
     line-height: 1.3;
@@ -400,7 +537,14 @@ def impact_card(title, value, subtitle, color="#4292c6"):
 
 def animated_plotly_chart(fig, height=420, frame_duration=70, transition_duration=35):
     plot_id = f"plotly_{uuid.uuid4().hex}"
-    html = fig.to_html(
+    html = """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body, .plotly-graph-div, .plotly-graph-div * {
+        font-family: 'Inter', Arial, sans-serif !important;
+    }
+    </style>
+    """ + fig.to_html(
         include_plotlyjs="cdn",
         full_html=False,
         auto_play=False,
@@ -562,7 +706,7 @@ else:
 # Display About Box when button is clicked
 if st.session_state.get("show_about", False):
     st.markdown("""
-    <div style="
+    <div class="about-panel" style="
         background-color:#111827;
         padding:25px;
         border-radius:10px;
@@ -577,7 +721,7 @@ if st.session_state.get("show_about", False):
     </p>
     
     <div style="text-align:center; margin:20px 0;">
-        <span style="font-size:20px; font-weight:500; color:white;">
+        <span class="about-formula" style="font-weight:500; color:white;">
             Risk = Hazard × Exposure × Vulnerability
         </span>
     </div>
@@ -891,7 +1035,7 @@ with tab0:
                 tickfont=dict(family=APP_FONT, color="white")
             ),
             yaxis=dict(
-                tickfont=dict(family=APP_FONT, color="white"),
+                tickfont=dict(family=APP_FONT, color="white", size=10),
                 title_font=dict(family=APP_FONT, color="white")
             )
         )
@@ -918,7 +1062,7 @@ with tab0:
         fig_bot.update_layout(
             yaxis=dict(
                 autorange="reversed",
-                tickfont=dict(family=APP_FONT, color="white"),
+                tickfont=dict(family=APP_FONT, color="white", size=10),
                 title_font=dict(family=APP_FONT, color="white")
             ),
             paper_bgcolor='rgba(0,0,0,0)',
@@ -1005,8 +1149,14 @@ with tab0:
     # SECTION 2: DETAILED ANALYSIS
     # =========================
 
+    detailed_title_suffix = ""
+    if municipio_selecionado != "Todos" and modo_analise == "Individual":
+        detailed_title_suffix = (
+            f' - <span class="selected-title-municipality">{municipio_selecionado}</span>'
+        )
+
     st.markdown(
-        '<div class="app-section-title">Análise Detalhada por Município</div>',
+        f'<div class="app-section-title">Análise Detalhada por Município{detailed_title_suffix}</div>',
         unsafe_allow_html=True
     )
 
@@ -1055,15 +1205,15 @@ with tab0:
 
                 st.markdown(f"""
                 <div class="mun-header-section">
-                    <div class="mun-header">{nome}</div>
+                    <div class="selected-municipality-title">{nome}</div>
                     <div class="kpi-square-container">
                         <div class="kpi-square" style="border-left-color: #fb923c;">
                             <div class="kpi-square-title">Risco</div>
-                            <div class="kpi-square-value">{round(risk, 3)}</div>
+                            <div class="kpi-square-value" style="font-size:17px !important;">{round(risk, 3)}</div>
                         </div>
                         <div class="kpi-square" style="border-left-color: #38bdf8;">
                             <div class="kpi-square-title">Ranking</div>
-                            <div class="kpi-square-value" style="font-size:17px;">{ranking_display_temp}</div>
+                            <div class="kpi-square-value" style="font-size:17px !important;">{ranking_display_temp}</div>
                         </div>
                     </div>
                 </div>
@@ -1083,7 +1233,7 @@ with tab0:
                     sub1, sub2, sub3 = st.columns(3)
 
                     with sub1:
-                        st.markdown("**Hazard**")
+                        st.markdown('<div class="subindex-label">Hazard</div>', unsafe_allow_html=True)
 
                         hazard_df = pd.DataFrame({
                             "Variáveis": [
@@ -1103,7 +1253,7 @@ with tab0:
                         st.markdown(styled_table(hazard_df), unsafe_allow_html=True)
                     
                     with sub2:
-                        st.markdown("**Exposure**")
+                        st.markdown('<div class="subindex-label">Exposure</div>', unsafe_allow_html=True)
 
                         exposure_df = pd.DataFrame({
                             "Variáveis": [
@@ -1119,7 +1269,7 @@ with tab0:
                         st.markdown(styled_table(exposure_df), unsafe_allow_html=True)
 
                     with sub3:
-                        st.markdown("**Vulnerability**")
+                        st.markdown('<div class="subindex-label">Vulnerability</div>', unsafe_allow_html=True)
 
                         vuln_df = pd.DataFrame({
                             "Variáveis": [
@@ -1222,7 +1372,7 @@ with tab0:
 
             # Tabelas para municipio 1
             with sub1:
-                st.markdown("**Hazard**")
+                st.markdown('<div class="subindex-label">Hazard</div>', unsafe_allow_html=True)
                 hazard_df = pd.DataFrame({
                     "Variáveis": [
                         "Déficit Hídrico",
@@ -1240,7 +1390,7 @@ with tab0:
                 st.markdown(styled_table(hazard_df, font_size="12px"), unsafe_allow_html=True)
 
             with sub2:
-                st.markdown("**Exposure**")
+                st.markdown('<div class="subindex-label">Exposure</div>', unsafe_allow_html=True)
                 exposure_df = pd.DataFrame({
                     "Variáveis": [
                         "Empregos Industriais per capita",
@@ -1254,7 +1404,7 @@ with tab0:
                 st.markdown(styled_table(exposure_df, font_size="12px"), unsafe_allow_html=True)
 
             with sub3:
-                st.markdown("**Vulnerability**")
+                st.markdown('<div class="subindex-label">Vulnerability</div>', unsafe_allow_html=True)
                 vuln_df = pd.DataFrame({
                     "Variáveis": [
                         "Intensidade Energética",
@@ -1271,7 +1421,7 @@ with tab0:
 
             # Tabelas para municipio 2
             with sub4:
-                st.markdown("**Hazard**")
+                st.markdown('<div class="subindex-label">Hazard</div>', unsafe_allow_html=True)
                 hazard_df = pd.DataFrame({
                     "Variáveis": [
                         "Déficit Hídrico",
@@ -1289,7 +1439,7 @@ with tab0:
                 st.markdown(styled_table(hazard_df, font_size="12px"), unsafe_allow_html=True)
 
             with sub5:
-                st.markdown("**Exposure**")
+                st.markdown('<div class="subindex-label">Exposure</div>', unsafe_allow_html=True)
                 exposure_df = pd.DataFrame({
                     "Variáveis": [
                         "Empregos Industriais per capita",
@@ -1303,7 +1453,7 @@ with tab0:
                 st.markdown(styled_table(exposure_df, font_size="12px"), unsafe_allow_html=True)
 
             with sub6:
-                st.markdown("**Vulnerability**")
+                st.markdown('<div class="subindex-label">Vulnerability</div>', unsafe_allow_html=True)
                 vuln_df = pd.DataFrame({
                     "Variáveis": [
                         "Intensidade Energética",
@@ -1481,15 +1631,14 @@ with tab0:
             st.markdown(f"""
             
             <div class="mun-header-section">
-                <div class="mun-header">{municipio}</div>
                 <div class="kpi-square-container">
                     <div class="kpi-square" style="border-left-color: #fb923c;">
                         <div class="kpi-square-title">Risco</div>
-                        <div class="kpi-square-value">{risk}</div>
+                        <div class="kpi-square-value" style="font-size:17px !important;">{risk}</div>
                     </div>
                     <div class="kpi-square" style="border-left-color: #38bdf8;">
                         <div class="kpi-square-title">Ranking</div>
-                        <div class="kpi-square-value" style="font-size:17px;">{ranking_display}</div>
+                        <div class="kpi-square-value" style="font-size:17px !important;">{ranking_display}</div>
                     </div>
                 </div>
             </div>
@@ -1513,7 +1662,7 @@ with tab0:
             sub1, sub2, sub3 = st.columns(3)
 
             with sub1:
-                st.markdown("**Hazard**")
+                st.markdown('<div class="subindex-label">Hazard</div>', unsafe_allow_html=True)
 
                 hazard_df = pd.DataFrame({
                     "Variáveis": [
@@ -1533,7 +1682,7 @@ with tab0:
                 st.markdown(styled_table(hazard_df), unsafe_allow_html=True)
             
             with sub2:
-                st.markdown("**Exposure**")
+                st.markdown('<div class="subindex-label">Exposure</div>', unsafe_allow_html=True)
 
                 exposure_df = pd.DataFrame({
                     "Variáveis": [
@@ -1549,7 +1698,7 @@ with tab0:
                 st.markdown(styled_table(exposure_df), unsafe_allow_html=True)
 
             with sub3:
-                st.markdown("**Vulnerability**")
+                st.markdown('<div class="subindex-label">Vulnerability</div>', unsafe_allow_html=True)
 
                 vuln_df = pd.DataFrame({
                     "Variáveis": [
@@ -1813,10 +1962,10 @@ with tab1:
                         paper_bgcolor="rgba(0,0,0,0)",
                         plot_bgcolor="rgba(0,0,0,0)",
                         margin=dict(l=90, r=20, t=10, b=82),
-                        font=dict(family=APP_FONT, color="white"),
+                        font=dict(family=APP_FONT, color="white", size=12),
                         xaxis=dict(
                             title="",
-                            tickfont=dict(family=APP_FONT, color="white"),
+                            tickfont=dict(family=APP_FONT, color="white", size=11),
                             showticklabels=True,
                             showline=True,
                             showgrid=False,
@@ -1827,9 +1976,9 @@ with tab1:
                         ),
                         yaxis=dict(
                             title="Impacto estimado (R$)",
-                            title_font=dict(family=APP_FONT, color="white"),
+                            title_font=dict(family=APP_FONT, color="white", size=12),
                             title_standoff=34,
-                            tickfont=dict(family=APP_FONT, color="white"),
+                            tickfont=dict(family=APP_FONT, color="white", size=11),
                             showticklabels=True,
                             showline=True,
                             showgrid=False,
@@ -1937,11 +2086,11 @@ with tab1:
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
                     margin=dict(l=90, r=95, t=6, b=34),
-                    font=dict(family=APP_FONT, color="white"),
-                    legend=dict(orientation="h", y=1.08, x=0, font=dict(family=APP_FONT, color="white")),
+                    font=dict(family=APP_FONT, color="white", size=12),
+                    legend=dict(orientation="h", y=1.08, x=0, font=dict(family=APP_FONT, color="white", size=11)),
                     xaxis=dict(
                         title="",
-                        tickfont=dict(family=APP_FONT, color="white"),
+                        tickfont=dict(family=APP_FONT, color="white", size=11),
                         showticklabels=True,
                         showline=True,
                         linecolor="white",
@@ -1956,9 +2105,9 @@ with tab1:
                     ),
                     yaxis=dict(
                         title="Mudança no risco",
-                        title_font=dict(family=APP_FONT, color="white"),
+                        title_font=dict(family=APP_FONT, color="white", size=12),
                         title_standoff=34,
-                        tickfont=dict(family=APP_FONT, color="white"),
+                        tickfont=dict(family=APP_FONT, color="white", size=11),
                         tickformat=".3f",
                         showticklabels=True,
                         showline=True,
@@ -1972,11 +2121,11 @@ with tab1:
                     ),
                     yaxis2=dict(
                         title="Impacto PIB (R$)",
-                        title_font=dict(family=APP_FONT, color="white"),
+                        title_font=dict(family=APP_FONT, color="white", size=12),
                         title_standoff=34,
                         overlaying="y",
                         side="right",
-                        tickfont=dict(family=APP_FONT, color="white"),
+                        tickfont=dict(family=APP_FONT, color="white", size=11),
                         showticklabels=True,
                         showline=True,
                         linecolor="white",
