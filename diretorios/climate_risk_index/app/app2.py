@@ -15,6 +15,8 @@ import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import numpy as np
 
+APP_FONT = "Inter"
+
 # =========================
 # CONFIG
 # =========================
@@ -44,7 +46,17 @@ st.image(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@500;600;700&display=swap');
+
+html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"],
+[data-testid="stMarkdownContainer"], [data-testid="stMarkdownContainer"] *,
+button, input, textarea, select, label {
+    font-family: 'Inter', Arial, sans-serif !important;
+}
+
+span[class*="material"], [data-testid="stIconMaterial"] {
+    font-family: 'Material Symbols Rounded' !important;
+}
 
 /* FUNDO */
 [data-testid="stAppViewContainer"] {
@@ -119,6 +131,25 @@ li[aria-selected="true"] {
 [data-testid="stMarkdownContainer"] p {
     color: #e5e7eb;
 }
+
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3,
+[data-testid="stMarkdownContainer"] h4,
+[data-testid="stMarkdownContainer"] div,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span,
+[data-testid="stMarkdownContainer"] strong,
+[data-testid="stMarkdownContainer"] b,
+[data-testid="stMarkdownContainer"] li {
+    font-family: 'Inter', Arial, sans-serif !important;
+}
+
+[data-testid="stMarkdownContainer"] code,
+[data-testid="stMarkdownContainer"] pre,
+[data-testid="stMarkdownContainer"] [style*="monospace"] {
+    font-family: monospace !important;
+}
             
 /* HEADERS DO STREAMLIT */
 [data-testid="stMarkdownContainer"] h1,
@@ -135,12 +166,21 @@ h1, h2, h3 {
 
 .main-project-title {
     color: white;
-    font-family: 'IBM Plex Serif', Georgia, serif;
-    font-size: 34px;
+    font-family: 'Orbitron', 'Arial Black', sans-serif;
+    font-size: 32px;
     font-weight: 600;
-    line-height: 1.18;
+    line-height: 1.22;
     letter-spacing: 0;
     margin: 0.15rem 0 1.1rem 0;
+}
+
+.app-section-title {
+    color: white;
+    font-family: 'Inter', Arial, sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0.2rem 0 0.9rem 0;
 }
 
 /* REMOVE TOPO */
@@ -211,6 +251,7 @@ header {
 }
 
 .mun-header {
+    font-family: 'Inter', Arial, sans-serif;
     font-size: 30px;
     font-weight: 600;
     color: #4292c6;
@@ -634,7 +675,19 @@ else:
 # =========================
 
 st.markdown(
-    '<h1 class="main-project-title">Índice de Risco Climático Industrial de Santa Catarina</h1>',
+    """
+    <div role="heading" aria-level="1" class="main-project-title" style="
+        color:white !important;
+        font-family:'Orbitron', 'Arial Black', sans-serif !important;
+        font-size:32px !important;
+        font-weight:600 !important;
+        line-height:1.18 !important;
+        letter-spacing:0 !important;
+        margin:0.15rem 0 1.1rem 0 !important;
+    ">
+        Índice de Risco Climático Industrial de Santa Catarina
+    </div>
+    """,
     unsafe_allow_html=True
 )
 
@@ -832,14 +885,14 @@ with tab0:
             margin=dict(l=0, r=0, t=0, b=0),
             coloraxis_showscale=False,
             height=300,
-            font=dict(color="white"),
+            font=dict(family=APP_FONT, color="white"),
             xaxis=dict(
-                title_font=dict(color="white"),
-                tickfont=dict(color="white")
+                title_font=dict(family=APP_FONT, color="white"),
+                tickfont=dict(family=APP_FONT, color="white")
             ),
             yaxis=dict(
-                tickfont=dict(color="white"),
-                title_font=dict(color="white")
+                tickfont=dict(family=APP_FONT, color="white"),
+                title_font=dict(family=APP_FONT, color="white")
             )
         )
 
@@ -865,18 +918,18 @@ with tab0:
         fig_bot.update_layout(
             yaxis=dict(
                 autorange="reversed",
-                tickfont=dict(color="white"),
-                title_font=dict(color="white")
+                tickfont=dict(family=APP_FONT, color="white"),
+                title_font=dict(family=APP_FONT, color="white")
             ),
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
             margin=dict(l=0, r=0, t=0, b=0),
             height=300,
             coloraxis_showscale=False,
-            font=dict(color="white"),
+            font=dict(family=APP_FONT, color="white"),
             xaxis=dict(
-                title_font=dict(color="white"),
-                tickfont=dict(color="white")
+                title_font=dict(family=APP_FONT, color="white"),
+                tickfont=dict(family=APP_FONT, color="white")
             )
         )
 
@@ -920,8 +973,8 @@ with tab0:
                     x=0.5,
                     y=-0.15,
                     len=1,
-                    title=dict(text="Índice de Risco Climático", font=dict(color="white", size=12)),
-                    tickfont=dict(color="white", size=11)
+                    title=dict(text="Índice de Risco Climático", font=dict(family=APP_FONT, color="white", size=12)),
+                    tickfont=dict(family=APP_FONT, color="white", size=11)
                 )
             )
 
@@ -952,7 +1005,10 @@ with tab0:
     # SECTION 2: DETAILED ANALYSIS
     # =========================
 
-    st.subheader("Análise Detalhada por Município")
+    st.markdown(
+        '<div class="app-section-title">Análise Detalhada por Município</div>',
+        unsafe_allow_html=True
+    )
 
     # CASO 1 — TODOS
     if municipio_selecionado == "Todos" and modo_analise == "Individual":
@@ -1110,12 +1166,12 @@ with tab0:
 
                     fig.update_layout(
                         paper_bgcolor='rgba(0,0,0,0)',
-                        font=dict(color="white"),
+                        font=dict(family=APP_FONT, color="white"),
                         polar=dict(
                             radialaxis=dict(
                                 visible=True,
                                 range=[0,1],
-                                tickfont=dict(color="#9ca3af")
+                                tickfont=dict(family=APP_FONT, color="#9ca3af")
                             )
                         ),
                         showlegend=True,
@@ -1125,7 +1181,7 @@ with tab0:
                             bgcolor='rgba(0,0,0,0)',
                             bordercolor='#4b5563',
                             borderwidth=1,
-                            font=dict(color="white")
+                            font=dict(family=APP_FONT, color="white")
                         )
                     )
 
@@ -1294,12 +1350,12 @@ with tab0:
                 
                 fig1.update_layout(
                     paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color="white"),
+                    font=dict(family=APP_FONT, color="white"),
                     polar=dict(
                         radialaxis=dict(
                             visible=True,
                             range=[0,1],
-                            tickfont=dict(color="#9ca3af")
+                            tickfont=dict(family=APP_FONT, color="#9ca3af")
                         )
                     ),
                     showlegend=True,
@@ -1309,7 +1365,7 @@ with tab0:
                         bgcolor='rgba(0,0,0,0)',
                         bordercolor='#4b5563',
                         borderwidth=1,
-                        font=dict(color="white")
+                        font=dict(family=APP_FONT, color="white")
                     )
                 )
                 st.plotly_chart(fig1, use_container_width=True)
@@ -1358,12 +1414,12 @@ with tab0:
                 
                 fig2.update_layout(
                     paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color="white"),
+                    font=dict(family=APP_FONT, color="white"),
                     polar=dict(
                         radialaxis=dict(
                             visible=True,
                             range=[0,1],
-                            tickfont=dict(color="#9ca3af")
+                            tickfont=dict(family=APP_FONT, color="#9ca3af")
                         )
                     ),
                     showlegend=True,
@@ -1373,7 +1429,7 @@ with tab0:
                         bgcolor='rgba(0,0,0,0)',
                         bordercolor='#4b5563',
                         borderwidth=1,
-                        font=dict(color="white")
+                        font=dict(family=APP_FONT, color="white")
                     )
                 )
                 st.plotly_chart(fig2, use_container_width=True)
@@ -1543,12 +1599,12 @@ with tab0:
 
                 fig.update_layout(
                     paper_bgcolor='rgba(0,0,0,0)',
-                    font=dict(color="white"),
+                    font=dict(family=APP_FONT, color="white"),
                     polar=dict(
                         radialaxis=dict(
                             visible=True,
                             range=[0,1],
-                            tickfont=dict(color="#9ca3af")
+                            tickfont=dict(family=APP_FONT, color="#9ca3af")
                         )
                     ),
                     showlegend=True,
@@ -1558,7 +1614,7 @@ with tab0:
                         bgcolor='rgba(0,0,0,0)',
                         bordercolor='#4b5563',
                         borderwidth=1,
-                        font=dict(color="white")
+                        font=dict(family=APP_FONT, color="white")
                     )
                 )
 
@@ -1757,10 +1813,10 @@ with tab1:
                         paper_bgcolor="rgba(0,0,0,0)",
                         plot_bgcolor="rgba(0,0,0,0)",
                         margin=dict(l=90, r=20, t=10, b=82),
-                        font=dict(color="white"),
+                        font=dict(family=APP_FONT, color="white"),
                         xaxis=dict(
                             title="",
-                            tickfont=dict(color="white"),
+                            tickfont=dict(family=APP_FONT, color="white"),
                             showticklabels=True,
                             showline=True,
                             showgrid=False,
@@ -1771,9 +1827,9 @@ with tab1:
                         ),
                         yaxis=dict(
                             title="Impacto estimado (R$)",
-                            title_font=dict(color="white"),
+                            title_font=dict(family=APP_FONT, color="white"),
                             title_standoff=34,
-                            tickfont=dict(color="white"),
+                            tickfont=dict(family=APP_FONT, color="white"),
                             showticklabels=True,
                             showline=True,
                             showgrid=False,
@@ -1881,11 +1937,11 @@ with tab1:
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
                     margin=dict(l=90, r=95, t=6, b=34),
-                    font=dict(color="white"),
-                    legend=dict(orientation="h", y=1.08, x=0, font=dict(color="white")),
+                    font=dict(family=APP_FONT, color="white"),
+                    legend=dict(orientation="h", y=1.08, x=0, font=dict(family=APP_FONT, color="white")),
                     xaxis=dict(
                         title="",
-                        tickfont=dict(color="white"),
+                        tickfont=dict(family=APP_FONT, color="white"),
                         showticklabels=True,
                         showline=True,
                         linecolor="white",
@@ -1900,9 +1956,9 @@ with tab1:
                     ),
                     yaxis=dict(
                         title="Mudança no risco",
-                        title_font=dict(color="white"),
+                        title_font=dict(family=APP_FONT, color="white"),
                         title_standoff=34,
-                        tickfont=dict(color="white"),
+                        tickfont=dict(family=APP_FONT, color="white"),
                         tickformat=".3f",
                         showticklabels=True,
                         showline=True,
@@ -1916,11 +1972,11 @@ with tab1:
                     ),
                     yaxis2=dict(
                         title="Impacto PIB (R$)",
-                        title_font=dict(color="white"),
+                        title_font=dict(family=APP_FONT, color="white"),
                         title_standoff=34,
                         overlaying="y",
                         side="right",
-                        tickfont=dict(color="white"),
+                        tickfont=dict(family=APP_FONT, color="white"),
                         showticklabels=True,
                         showline=True,
                         linecolor="white",
