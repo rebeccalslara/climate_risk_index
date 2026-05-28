@@ -44,6 +44,7 @@ st.image(
 
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600;700&display=swap');
 
 /* FUNDO */
 [data-testid="stAppViewContainer"] {
@@ -130,6 +131,16 @@ li[aria-selected="true"] {
 /* HEADERS CRIADOS POR st.title / st.header */
 h1, h2, h3 {
     color: white;
+}
+
+.main-project-title {
+    color: white;
+    font-family: 'IBM Plex Serif', Georgia, serif;
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1.18;
+    letter-spacing: 0;
+    margin: 0.15rem 0 1.1rem 0;
 }
 
 /* REMOVE TOPO */
@@ -622,7 +633,10 @@ else:
 # TÍTULO
 # =========================
 
-st.title("Indice de Risco Climático Industrial de Santa Catarina")
+st.markdown(
+    '<h1 class="main-project-title">Índice de Risco Climático Industrial de Santa Catarina</h1>',
+    unsafe_allow_html=True
+)
 
 # =========================
 # FUNÇÃO PARA ANÁLISE
