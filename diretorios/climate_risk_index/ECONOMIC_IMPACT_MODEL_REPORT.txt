@@ -1,0 +1,367 @@
+ECONOMIC IMPACT MODEL REPORT
+Climate Risk Index - Santa Catarina Municipalities
+Updated: 2026-05-15
+
+================================================================================
+1. PURPOSE OF THIS MODELING STEP
+================================================================================
+
+The initial goal of this part of the project was to translate variation in the
+Climate Risk Index into an economic or fiscal impact that could be communicated
+in monetary terms.
+
+The original question was:
+
+    If the Climate Risk Index increases by 0.1, how much does this affect the
+    municipality in reais?
+
+The first planned outcome variable was GDP, but this path was later dropped
+because the Climate Risk Index already includes economic structure components,
+including industrial exposure and an inverted GDP per capita vulnerability
+component. This created a theoretical problem: in some municipalities, higher
+industrial activity can increase both the Climate Risk Index and GDP, producing
+a relationship that is difficult to interpret as climate damage.
+
+The analysis then moved to fiscal impact, using municipal environmental
+expenses as the dependent variable.
+
+
+================================================================================
+2. CURRENT DEPENDENT VARIABLE
+================================================================================
+
+The current dependent variable is:
+
+    log(real_environmental_expense)
+
+Source:
+
+    data/raw_data/SICONFI/Interface com RSiconfi - Despesas Gestao Ambiental.xlsx
+
+Relevant columns:
+
+    NO_ENTE        municipality name
+    AN_EXERCICIO  fiscal year
+    VALUE         nominal environmental expense
+
+The file currently covers:
+
+    2015-2023
+
+The nominal expense was converted into real values using IPCA:
+
+    real_environmental_expense = (nominal_environmental_expense / IPCA_index) * 100
+
+Source for deflator:
+
+    data/raw_data/IPEADATA/IPCA.xls
+
+The model uses log(real_environmental_expense), keeping only positive values.
+Missing values are not treated as zero. Internal missing gaps are interpolated
+only when a municipality has observed values before and after the missing year.
+
+
+================================================================================
+3. MAIN RISK VARIABLE
+================================================================================
+
+The main explanatory variable is:
+
+    risk_mean_3yr
+
+This is the mean of:
+
+    risk_norm_t
+    risk_norm_lag1
+    risk_norm_lag2
+
+The reason for using this 3-year mean is theoretical: climate risk effects and
+municipal fiscal responses can be delayed. A current-year-only specification may
+miss the way climate stress accumulates or affects budgets with delay.
+
+The interpretation of the risk coefficient is log-linear. For a 0.1 increase in
+risk_mean_3yr:
+
+    percent effect = exp(beta * 0.1) - 1
+
+
+================================================================================
+4. CONTROL VARIABLES TESTED
+================================================================================
+
+4.1 Transfer revenue control
+----------------------------
+
+The main fiscal control retained in the current model is:
+
+    log(real_transfer_revenue)
+
+Source:
+
+    data/raw_data/SICONFI/municipio_receita_transferencia.csv
+
+This control was kept because it is theoretically meaningful. Environmental and
+climate-related spending by municipalities often depends on intergovernmental
+transfers rather than only on local own-source fiscal capacity.
+
+Transfer revenue is consistently positive and statistically strong in the model.
+
+
+4.2 Total revenue control
+-------------------------
+
+We also tested total municipal revenue:
+
+    log(real_total_revenue)
+
+Source:
+
+    data/raw_data/SICONFI/Interface com RSiconfi - Receitas.xlsx
+
+Filter used:
+
+    tipo_receita == "Receitas Brutas Realizadas"
+
+The nominal total revenue was also deflated using IPCA:
+
+    real_total_revenue = (nominal_total_revenue / IPCA_index) * 100
+
+This control was later removed from the preferred model because:
+
+    - It did not improve the risk coefficient.
+    - It was not statistically strong in the full fixed effects model.
+    - It overlapped conceptually with transfer revenue.
+    - The project theory is more directly related to transferred resources,
+      because environmental and climate-related municipal expenses often depend
+      on money transferred from higher levels of government.
+
+When total revenue was included, the full FE model produced approximately:
+
+    risk_mean_3yr              coefficient =  0.2634   p-value = 0.8611
+    log_real_transfer_revenue  coefficient =  0.8222   p-value = 0.0187
+    log_real_total_revenue     coefficient = -0.0130   p-value = 0.6025
+
+Conclusion:
+
+    Total revenue did not strengthen the model and was dropped.
+
+
+================================================================================
+5. FIXED EFFECTS SPECIFICATIONS TESTED
+================================================================================
+
+The current script estimates four specifications:
+
+    1. Municipality FE + year FE
+    2. Municipality FE only
+    3. Year FE only
+    4. No fixed effects
+
+The purpose of this comparison is to understand whether the observed
+relationship comes from:
+
+    - differences between municipalities, or
+    - changes inside the same municipality over time.
+
+Municipality fixed effects absorb all time-invariant municipal characteristics,
+including geography, long-term size, structural fiscal capacity, baseline
+economic profile, administrative patterns, and stable vulnerability.
+
+Year fixed effects absorb shocks common to all municipalities in a given year,
+including macroeconomic conditions, national policy changes, fiscal cycles,
+inflation not fully captured by the deflator, and reporting changes.
+
+
+================================================================================
+6. CURRENT RESULTS WITHOUT TOTAL REVENUE CONTROL
+================================================================================
+
+Current model controls:
+
+    risk_mean_3yr
+    log_real_transfer_revenue
+
+Dependent variable:
+
+    log(real_environmental_expense)
+
+Model sample:
+
+    Observations:    1559
+    Municipalities:  223
+    Years:           2015-2023
+
+
+6.1 Risk coefficient comparison
+-------------------------------
+
+For risk_mean_3yr:
+
+    Municipality FE + year FE
+        coefficient:              0.1563
+        p-value:                  0.9176
+        effect of +0.1 risk:      +1.58%
+
+    Municipality FE only
+        coefficient:             -0.4880
+        p-value:                  0.7142
+        effect of +0.1 risk:      -4.76%
+
+    Year FE only
+        coefficient:             -2.5876
+        p-value:                  0.0046
+        effect of +0.1 risk:     -22.80%
+
+    No fixed effects
+        coefficient:             -2.6573
+        p-value:                  0.0034
+        effect of +0.1 risk:     -23.34%
+
+
+6.2 Transfer revenue coefficient comparison
+-------------------------------------------
+
+For log_real_transfer_revenue:
+
+    Municipality FE + year FE
+        coefficient:              0.8590
+        p-value:                  0.0159
+
+    Municipality FE only
+        coefficient:              1.5132
+        p-value:                  0.0000
+
+    Year FE only
+        coefficient:              1.3872
+        p-value:                  0.0000
+
+    No fixed effects
+        coefficient:              1.3909
+        p-value:                  0.0000
+
+
+================================================================================
+7. INTERPRETATION OF THE FIXED EFFECTS RESULTS
+================================================================================
+
+The results show a clear pattern:
+
+    - Without municipality fixed effects, the risk coefficient is negative and
+      statistically significant.
+
+    - With municipality fixed effects, the risk coefficient becomes weak and
+      statistically insignificant.
+
+    - Adding year fixed effects alone does not eliminate the negative
+      relationship. The year-FE-only model is very similar to the no-FE model.
+
+Therefore, the main source of the relationship is not common annual shocks.
+The important change happens when municipality fixed effects are included.
+
+This means the significant negative relationship is mostly cross-sectional:
+
+    municipalities with higher Climate Risk Index scores tend to have lower
+    environmental spending, structurally.
+
+It does not mean that an increase in climate risk within the same municipality
+causes environmental spending to fall. Instead, it suggests that high-risk
+municipalities are structurally different from lower-risk municipalities.
+
+This is coherent with the construction of the Climate Risk Index. High-risk
+municipalities often have characteristics such as:
+
+    - lower GDP per capita,
+    - stronger agricultural dependence,
+    - smaller fiscal capacity,
+    - different economic structure,
+    - lower ability to finance environmental response.
+
+Because of this, the negative coefficient in the no-FE and year-FE-only models
+is not interpreted as a causal climate impact. It is better interpreted as a
+possible fiscal response gap:
+
+    municipalities with higher climate risk may not be the municipalities with
+    greater environmental spending capacity.
+
+
+================================================================================
+8. WHY THE FULL FE MODEL IS IMPORTANT
+================================================================================
+
+The full fixed effects model asks a stricter question:
+
+    Within the same municipality, in years when its climate risk is higher than
+    its own average, and after controlling for common year shocks, is
+    environmental spending also higher?
+
+The answer from the current data is:
+
+    The coefficient shows a positive relationship, but no statistically robust evidence was found.
+
+This is important because the original goal was to estimate how a change in
+climate risk translates into a monetary fiscal impact. The full FE model is the
+closest specification to that question, but the current data do not support a
+strong conclusion.
+
+Municipality FE + year FE
+        coefficient:              0.1563
+        p-value:                  0.9176
+        effect of +0.1 risk:      +1.58%
+
+================================================================================
+9. OTHER DEPENDENT VARIABLES TESTED AND DROPPED
+================================================================================
+
+During this stage, other fiscal outcomes were considered or briefly tested:
+
+    - total municipal expenses,
+    - industrial-related expenses,
+    - broader environmental/resilience expenses,
+    - GDP as an economic outcome.
+
+These were not retained as the preferred specification.
+
+Reasons:
+
+    - Total expenses are too broad and include many spending categories unrelated
+      to climate response.
+
+    - Industrial expenses did not match the theoretical mechanism well.
+
+    - The broader environmental/resilience file mixed several categories such as
+      infrastructure, sanitation, civil defense, social assistance, basic
+      assistance, and urban resilience. This was useful to test, but it made the
+      dependent variable less conceptually clean.
+
+    - GDP was dropped because the Climate Risk Index itself contains economic
+      structure components. A GDP model could confuse economic size/growth with
+      climate risk, especially because industrial exposure can rise together
+      with GDP.
+
+
+================================================================================
+10. MAIN CONCLUSION
+================================================================================
+
+The environmental expense model is useful, but it does not answer the original
+economic-impact question in the way initially intended.
+
+The strongest finding is not:
+
+    "Climate risk increases environmental spending."
+
+The stronger finding is:
+
+    "Environmental spending appears to be more strongly related to transfer
+    revenue and fiscal capacity than to short-run changes in climate risk."
+    ~a political insight~
+
+And:
+
+    "Higher-risk municipalities may have lower environmental spending capacity,
+    suggesting a mismatch between climate risk and fiscal response."
+
+This is still policy-relevant. It suggests that the municipalities with the
+highest climate risk may not necessarily be the ones with the fiscal resources
+needed to respond.
+

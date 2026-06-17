@@ -90,7 +90,6 @@ Current deflator files:
 
 - `deflator do PIB.xls`: GDP implicit deflator used to calculate real GDP.
 - `IGP-DI indice.xls`: IGP-DI index used to calculate real agricultural production values.
-- `IPCA.xls`: IPCA index used for the planned fiscal expenditure module.
 
 The deflation rule is:
 
@@ -137,7 +136,7 @@ diretorios/climate_risk_index/
 |-- data/
 |   |-- raw_data/                       # Original input files
 |   |   |-- CELESC/
-|   |   |-- IPEADATA/                   # Deflators: GDP, IGP-DI, IPCA
+|   |   |-- IPEADATA/                   # Deflators and real value-added series
 |   |   |-- RAIS/
 |   |   |-- SICONFI/
 |   |   |-- shapes/
@@ -215,78 +214,11 @@ It includes the final risk score, sub-indexes, normalized component variables, r
 
 ## Economic Impact Module
 
-The `economic_impact.py` script has two analytical layers:
+The `economic_impact.py` script builds the economic impact outputs used in the Streamlit dashboard. The public dashboard presents economic growth models, not the exploratory environmental expenditure models tested during development.
 
-1. An internal fiscal-environmental model, used for exploratory interpretation.
-2. The preferred economic impact models used in the Streamlit dashboard.
+### Dashboard Models
 
-### Internal Fiscal Model
-
-The internal fiscal model estimates the association between climate risk and municipal environmental expenditure.
-
-Fiscal expense input:
-
-```text
-diretorios/climate_risk_index/data/raw_data/SICONFI/Interface com RSiconfi - Despesas Gestão Ambiental.xlsx
-```
-
-Fiscal expense fields:
-
-- municipality: `NO_ENTE`
-- year: `AN_EXERCICIO`
-- nominal environmental expense: `VALUE`
-- no filter is applied; bimonthly rows are summed by municipality and year
-- current coverage: 2015-2023
-
-Revenue control:
-
-```text
-diretorios/climate_risk_index/data/raw_data/SICONFI/municipio_receita_transferencia.csv
-```
-
-Transfer revenue uses the Cota ICMS transfer file. This is used as the fiscal capacity control because climate and environmental expenses are often financed through transferred resources.
-
-Nominal expense and revenue values are deflated with:
-
-```text
-diretorios/climate_risk_index/data/raw_data/IPEADATA/IPCA.xls
-```
-
-using:
-
-```text
-real value = (nominal value / IPCA index) x 100
-```
-
-The internal fiscal model is:
-
-```text
-log(real_environmental_expense_it) =
-    beta0 * risk_mean_3yr_it
-  + beta1 * log(real_transfer_revenue_it)
-  + municipality fixed effects
-  + year fixed effects
-  + error_it
-```
-
-`risk_mean_3yr` is the average of current risk, one-year lagged risk, and two-year lagged risk. This captures delayed climate pressure while avoiding multicollinearity among highly correlated separate lag terms.
-
-Missing fiscal and revenue values are temporally interpolated only when they are internal gaps in an existing municipal time series. Pre-creation years for `BALNEARIO RINCAO` and `PESCARIA BRAVA` remain missing.
-
-Internal fiscal outputs:
-
-```text
-diretorios/climate_risk_index/data/data_handling/economic_impact_raw_2002_2023.csv
-diretorios/climate_risk_index/data/data_handling/economic_impact_model_data_2002_2023.csv
-diretorios/climate_risk_index/output/economic_impact_results_2002_2023.csv
-diretorios/climate_risk_index/output/economic_impact_municipal_2002_2023.csv
-```
-
-The fiscal monetary estimates translate a `0.1` increase in `risk_norm` into each municipality's own environmental-expense scale. Values in reais should not be interpreted as direct cross-municipality rankings, because municipalities have different budget sizes and reporting structures. This model is retained for internal insight, but it is not the main model shown in the public dashboard.
-
-### Preferred Dashboard Models
-
-The dashboard uses economic growth models instead of the fiscal expenditure model. To reduce mechanical overlap between the Climate Risk Index and GDP, the script builds an alternative risk variable without the GDP component:
+To reduce mechanical overlap between the Climate Risk Index and GDP, the script builds an alternative risk variable without the GDP component:
 
 ```text
 risk_norm_without_GDP
@@ -322,6 +254,8 @@ The dashboard also keeps robustness information, including:
 - a current-year hazard-only GDP growth model with industrial value-added growth as a control
 - an industrial spillover check linking agricultural value-added growth to industrial value-added growth
 
+### Economic Interpretation
+
 The preferred models are interpreted as associations, not causal proof. They suggest that increases in climate risk are associated with lower next-year municipal GDP growth, and that agricultural value-added is one of the strongest transmission channels.
 
 The dashboard converts model-associated percentage effects into monetary estimates using each municipality's own economic base. These values are communication estimates, not observed losses, and should not be interpreted as direct cross-municipality rankings.
@@ -333,6 +267,16 @@ diretorios/climate_risk_index/output/economic_impact_dashboard_municipal_year_20
 diretorios/climate_risk_index/output/gdp_growth_impact_municipal_2002_2021.csv
 diretorios/climate_risk_index/output/gdp_growth_impact_results_2002_2021.csv
 diretorios/climate_risk_index/output/gdp_growth_robustness_tests_2002_2021.csv
+```
+
+### Additional Model Reports
+
+Several alternative specifications were tested during development, including environmental expenditure models, transfer-revenue controls, different fixed-effect structures, hazard-only specifications, sectoral GDP and value-added models, lag structures, and spillover checks. These tests and their interpretation are documented in:
+
+```text
+diretorios/climate_risk_index/ECONOMIC_IMPACT_MODEL_REPORT.txt
+diretorios/climate_risk_index/ECONOMIC_IMPACT_PREFERRED_MODELS_REPORT.txt
+diretorios/climate_risk_index/STATISTICAL_INSIGHTS_REPORT.txt
 ```
 
 ## Author
