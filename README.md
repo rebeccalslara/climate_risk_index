@@ -4,7 +4,7 @@
 
 This project develops a municipal Climate Risk Index for the industrial sector in Santa Catarina, Brazil. The index adapts the IPCC AR5 risk framework to measure relative climate risk across the state's 295 municipalities.
 
-The current version expands the project from a single-year index into a 2002-2023 time series. This allows the dashboard to compare municipalities in a selected year and prepares the project for future analysis of how changes in climate risk relate to fiscal and economic outcomes.
+The current version expands the project from a single-year index into a 2002-2023 time series. This allows the dashboard to compare municipalities in a selected year and to estimate how changes in climate risk are associated with municipal economic outcomes.
 
 The model follows:
 
@@ -147,6 +147,10 @@ diretorios/climate_risk_index/
 |-- output/                             # Final app-ready outputs
 |   |-- climate_risk_index_2002_2023.csv
 |   |-- dashboard_dataset_2002_2023.csv
+|   |-- economic_impact_dashboard_municipal_year_2002_2021.csv
+|   |-- gdp_growth_impact_municipal_2002_2021.csv
+|   |-- gdp_growth_impact_results_2002_2021.csv
+|   |-- gdp_growth_robustness_tests_2002_2021.csv
 |   |-- exposure_index_2002_2023.csv
 |   |-- hazard_index_2002_2023.csv
 |   |-- vulnerability_index_2002_2023.csv
@@ -157,6 +161,7 @@ diretorios/climate_risk_index/
 |   |-- hazard.py                       # Builds hazard time series
 |   |-- vulnerability.py                # Builds vulnerability time series
 |   |-- climate_risk_index.py           # Combines sub-indexes into final risk index
+|   |-- economic_impact.py              # Builds economic impact panel models and dashboard outputs
 |
 |-- .gitignore
 ```
@@ -196,7 +201,7 @@ Dashboard features include:
 - Interactive map of climate risk
 - Detailed municipality view
 - Municipality comparison
-- Statistical insights, including risk distribution, mismatch analysis, and correlation matrices
+- Economic impact dashboard for model-associated GDP, agricultural value-added, and industrial spillover estimates
 
 ## Current Outputs
 
@@ -210,7 +215,14 @@ It includes the final risk score, sub-indexes, normalized component variables, r
 
 ## Economic Impact Module
 
-The `economic_impact.py` script estimates the association between climate risk and municipal environmental expenditure.
+The `economic_impact.py` script has two analytical layers:
+
+1. An internal fiscal-environmental model, used for exploratory interpretation.
+2. The preferred economic impact models used in the Streamlit dashboard.
+
+### Internal Fiscal Model
+
+The internal fiscal model estimates the association between climate risk and municipal environmental expenditure.
 
 Fiscal expense input:
 
@@ -246,7 +258,7 @@ using:
 real value = (nominal value / IPCA index) x 100
 ```
 
-The current model is:
+The internal fiscal model is:
 
 ```text
 log(real_environmental_expense_it) =
@@ -261,7 +273,7 @@ log(real_environmental_expense_it) =
 
 Missing fiscal and revenue values are temporally interpolated only when they are internal gaps in an existing municipal time series. Pre-creation years for `BALNEARIO RINCAO` and `PESCARIA BRAVA` remain missing.
 
-Economic impact outputs:
+Internal fiscal outputs:
 
 ```text
 diretorios/climate_risk_index/data/data_handling/economic_impact_raw_2002_2023.csv
@@ -270,7 +282,58 @@ diretorios/climate_risk_index/output/economic_impact_results_2002_2023.csv
 diretorios/climate_risk_index/output/economic_impact_municipal_2002_2023.csv
 ```
 
-The monetary impact estimates translate a `0.1` increase in `risk_norm` into each municipality's own environmental-expense scale. Values in reais should not be interpreted as direct cross-municipality rankings, because municipalities have different budget sizes and reporting structures.
+The fiscal monetary estimates translate a `0.1` increase in `risk_norm` into each municipality's own environmental-expense scale. Values in reais should not be interpreted as direct cross-municipality rankings, because municipalities have different budget sizes and reporting structures. This model is retained for internal insight, but it is not the main model shown in the public dashboard.
+
+### Preferred Dashboard Models
+
+The dashboard uses economic growth models instead of the fiscal expenditure model. To reduce mechanical overlap between the Climate Risk Index and GDP, the script builds an alternative risk variable without the GDP component:
+
+```text
+risk_norm_without_GDP
+```
+
+This version removes `pib_pc_inv` from the vulnerability channel before recomputing the climate risk index.
+
+The preferred GDP model is:
+
+```text
+gdp_growth_log_it =
+    beta * risk_norm_without_GDP_i,t-1
+  + gamma * va_industrial_growth_log_it
+  + municipality fixed effects
+  + year fixed effects
+  + error_it
+```
+
+The preferred agricultural channel model is:
+
+```text
+va_agro_growth_log_it =
+    beta * risk_norm_without_GDP_i,t-1
+  + municipality fixed effects
+  + year fixed effects
+  + error_it
+```
+
+Standard errors are clustered by municipality. The economic panel uses 2003-2021 because industrial and agricultural value-added series are available through 2021 and growth rates require a previous year.
+
+The dashboard also keeps robustness information, including:
+
+- a current-year hazard-only GDP growth model with industrial value-added growth as a control
+- an industrial spillover check linking agricultural value-added growth to industrial value-added growth
+
+The preferred models are interpreted as associations, not causal proof. They suggest that increases in climate risk are associated with lower next-year municipal GDP growth, and that agricultural value-added is one of the strongest transmission channels.
+
+The dashboard converts model-associated percentage effects into monetary estimates using each municipality's own economic base. These values are communication estimates, not observed losses, and should not be interpreted as direct cross-municipality rankings.
+
+Main economic impact outputs:
+
+```text
+diretorios/climate_risk_index/output/economic_impact_dashboard_municipal_year_2002_2021.csv
+diretorios/climate_risk_index/output/gdp_growth_impact_municipal_2002_2021.csv
+diretorios/climate_risk_index/output/gdp_growth_impact_results_2002_2021.csv
+diretorios/climate_risk_index/output/gdp_growth_robustness_tests_2002_2021.csv
+```
 
 ## Author
 
